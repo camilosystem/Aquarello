@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
-import { DeliveryHeader } from "@/components/domiciliario/header"
-import { BottomNavDelivery } from "@/components/domiciliario/bottom-nav"
+import DeliveryHeader from "@/components/domiciliario/header"
+import BottomNavDelivery from "@/components/domiciliario/bottom-nav"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
