@@ -1,0 +1,58 @@
+"use client"
+
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { Home, ScanLine, History, User } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+const navItems = [
+  {
+    href: "/domiciliario",
+    label: "Inicio",
+    icon: Home,
+  },
+  {
+    href: "/domiciliario/escanear",
+    label: "Escanear",
+    icon: ScanLine,
+  },
+  {
+    href: "/domiciliario/historial",
+    label: "Historial",
+    icon: History,
+  },
+  {
+    href: "/domiciliario/perfil",
+    label: "Perfil",
+    icon: User,
+  },
+]
+
+export function BottomNavDelivery() {
+  const pathname = usePathname()
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t z-50">
+      <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 px-4 py-2 min-w-[64px] transition-colors",
+                isActive
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <item.icon className={cn("h-5 w-5", isActive && "stroke-[2.5]")} />
+              <span className="text-xs font-medium">{item.label}</span>
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
+  )
+}
