@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { DomiciliarioHeader } from "@/components/domiciliario/header"
-import { DeliveryMap } from "@/components/domiciliario/delivery-map"
+import dynamic from "next/dynamic"
+
+// Cargamos el mapa dinámicamente apagando el renderizado del servidor (ssr: false)
+const DeliveryMap = dynamic(
+  () => import("@/components/domiciliario/delivery-map").then((mod) => mod.DeliveryMap || mod.default),
+  { ssr: false }
+)
 import { TaskCard } from "@/components/domiciliario/task-card"
 import { BottomNavDelivery } from "@/components/domiciliario/bottom-nav"
 import { Button } from "@/components/ui/button"
