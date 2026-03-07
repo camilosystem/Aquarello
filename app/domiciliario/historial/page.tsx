@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Loader2, Package, Search, Calendar, MapPin, Scale } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { ORDER_STATUS_CONFIG } from "@/lib/types"
+import { STATUS_COLORS } from "@/lib/types"
 
 export default function HistorialPage() {
   const [user, setUser] = useState<any>(null)
@@ -112,7 +112,7 @@ export default function HistorialPage() {
             </div>
           ) : (
             filteredOrders.map((order) => {
-              const statusConfig = ORDER_STATUS_CONFIG[order.status as keyof typeof ORDER_STATUS_CONFIG]
+              const statusConfig = STATUS_COLORS[order.status as keyof typeof STATUS_COLORS]
               return (
                 <Card key={order.id} className="overflow-hidden">
                   <CardContent className="p-4">
