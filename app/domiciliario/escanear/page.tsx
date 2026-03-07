@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import DeliveryHeader from "@/components/domiciliario/header"
-import BottomNavDelivery from "@/components/domiciliario/bottom-nav"
+import { DomiciliarioHeader } from "@/components/domiciliario/header"
+import { BottomNavDelivery } from "@/components/domiciliario/bottom-nav"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -238,9 +238,8 @@ export default function EscanearPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <DeliveryHeader user={user} />
-      
-      <main className="flex-1 p-4 pb-24">
+      <DomiciliarioHeader userName={user?.email} pendingCount={0} />
+            <main className="flex-1 p-4 pb-24">
         {/* Progress Steps */}
         <div className="flex items-center justify-between mb-6">
           {["scan", "weigh", "confirm", "done"].map((s, i) => (
