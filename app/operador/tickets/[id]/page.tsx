@@ -30,7 +30,8 @@ import {
   Pause,
   RotateCcw,
   Send,
-  FileText
+  FileText,
+  Bike
 } from 'lucide-react'
 import type { Order, OrderPreferences, WashingProcess } from '@/lib/types'
 
@@ -58,14 +59,20 @@ const PROCESS_STEPS = [
 
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const [order, setOrder] = useState<Order | null>(null)
+  const [order, setOrder] = useState<Order | any>(null)
   const [preferences, setPreferences] = useState<OrderPreferences | null>(null)
   const [process, setProcess] = useState<WashingProcess | null>(null)
+  const [domiciliarios, setDomiciliarios] = useState<any[]>([])
+  
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [assigning, setAssigning] = useState(false)
+  
   const [selectedMachine, setSelectedMachine] = useState('')
   const [selectedDryer, setSelectedDryer] = useState('')
   const [processNotes, setProcessNotes] = useState('')
+  const [selectedDomiciliario, setSelectedDomiciliario] = useState<string>('unassigned')
+  
   const [completedSteps, setCompletedSteps] = useState<Record<string, boolean>>({
     alistamiento: false,
     lavado: false,
@@ -98,6 +105,13 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       }
 
       setOrder(orderData)
+      
+      // Set initial selected domiciliario
+      if (orderData.delivery_person_id) {
+        setSelectedDomiciliario(orderData.delivery_person_id)
+      } else {
+        setSelectedDomiciliario('unassigned')
+      }
 
       // Load preferences
       const { data: prefsData } = await supabase
@@ -108,6 +122,16 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
       if (prefsData) {
         setPreferences(prefsData)
+      }
+
+      // Load domiciliarios list
+      const { data: domData } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'domiciliario')
+        
+      if (domData) {
+        setDomiciliarios(domData)
       }
 
       // Load or create process
@@ -142,6 +166,28 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       ...prev,
       [step]: !prev[step]
     }))
+  }
+
+  const handleAssignDomiciliario = async () => {
+    setAssigning(true)
+    try {
+      const valToSave = selectedDomiciliario === 'unassigned' ? null : selectedDomiciliario
+      
+      const { error } = await supabase
+        .from('orders')
+        .update({ delivery_person_id: valToSave })
+        .eq('id', id)
+
+      if (error) throw error
+
+      toast.success(valToSave ? 'Domiciliario asignado correctamente' : 'Asignación removida')
+      
+      // Update local order state
+      setOrder((prev: any) => prev ? { ...prev, delivery_person_id: valToSave } : null)
+    } catch (error) {
+      toast.error('Error al asignar domiciliario')
+    }
+    setAssigning(false)
   }
 
   const handleStartProcess = async () => {
@@ -474,6 +520,46 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               </CardContent>
             </Card>
           </div>
+
+          {/* Asignación de Domiciliario */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Bike className="h-5 w-5" />
+                Asignación de Domiciliario
+              </CardTitle>
+              <CardDescription>
+                Asigna esta orden a un domiciliario para su recogida o entrega
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row gap-3 items-end">
+                <div className="space-y-2 flex-1">
+                  <Label>Seleccionar Domiciliario</Label>
+                  <Select value={selectedDomiciliario} onValueChange={setSelectedDomiciliario}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sin asignar" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Sin asignar</SelectItem>
+                      {domiciliarios.map(dom => (
+                        <SelectItem key={dom.id} value={dom.id}>
+                          {dom.full_name || 'Domiciliario sin nombre'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  onClick={handleAssignDomiciliario} 
+                  disabled={assigning || selectedDomiciliario === (order?.delivery_person_id || 'unassigned')}
+                  className="w-full sm:w-auto"
+                >
+                  {assigning ? 'Asignando...' : 'Guardar Asignación'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Process Control */}
           {!isCompleted && (
