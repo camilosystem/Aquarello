@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Lavva - Domiciliario',
+  title: 'Lavva Driver',
   description: 'Panel de domiciliario para recogida y entrega de ropa',
+  manifest: '/manifest-domiciliario.json', // ¡Aquí está la magia de la marca blanca separada!
 }
 
 export const viewport: Viewport = {
