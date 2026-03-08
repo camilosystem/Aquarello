@@ -184,8 +184,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       
       // Update local order state
       setOrder((prev: any) => prev ? { ...prev, delivery_person_id: valToSave } : null)
-    } catch (error) {
-      toast.error('Error al asignar domiciliario')
+    } catch (error: any) {
+      // AQUÍ ESTÁ EL CAMBIO MÁGICO
+      console.error("Error completo de Supabase:", error);
+      toast.error(`Error real: ${error.message || 'Revisa la consola'}`);
     }
     setAssigning(false)
   }
