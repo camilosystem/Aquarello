@@ -27,7 +27,8 @@ export default function DomiciliarioPage() {
   const [activeTab, setActiveTab] = useState<"pickup" | "delivery">("pickup")
   const supabase = createClient()
 
-  async function loadData() {
+useEffect(() => {
+    async function loadData() {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
 
