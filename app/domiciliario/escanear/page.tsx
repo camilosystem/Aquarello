@@ -94,42 +94,56 @@ function EscanearContent() {
   const handleScanClientQR = async (qrResult: string) => {
     setLoading(true)
     try {
-      // Limpiamos espacios invisibles que a veces agregan las cámaras
       const cleanQR = qrResult.trim()
-      
-      // Te mostramos exactamente qué leyó la cámara para estar seguros
-      toast.info(`Código leído: ${cleanQR}`)
+      toast.info(`Buscando código: ${cleanQR}`)
 
-      // 1. Buscar la orden por el código QR
-      const { data: order, error } = await supabase
+      // 1. Buscar SOLO la orden (sin el join que confunde a Supabase)
+      const { data: order, error: orderError } = await supabase
         .from("orders")
-        .select("*, cliente:profiles!user_id(full_name, phone)")
+        .select("*")
         .eq("qr_code", cleanQR)
         .single()
 
-      if (error || !order) {
-        console.error("Error de Supabase:", error)
-        throw new Error("No se encontró ninguna orden con este código QR")
+      if (orderError || !order) {
+        console.error("Error al buscar orden:", orderError)
+        throw new Error("La orden no existe en la base de datos.")
       }
       
       if (order.status !== 'pendiente') {
-        throw new Error(`Esta orden ya está en estado: ${order.status}`)
+        throw new Error(`Esta orden no se puede asignar (Estado: ${order.status})`)
       }
 
-      // 2. Auto-asignar la orden a este domiciliario
+      // 2. Buscar los datos del cliente manualmente (El truco infalible)
+      if (order.user_id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, phone")
+          .eq("id", order.user_id)
+          .single()
+        
+        // Se lo inyectamos a la orden para que la pantalla lo muestre bien
+        order.cliente = profile || { full_name: 'Cliente sin nombre', phone: '' }
+      } else {
+        order.cliente = { full_name: 'Cliente sin nombre', phone: '' }
+      }
+
+      // 3. Auto-asignar la orden a este domiciliario
       const { error: updateError } = await supabase
         .from('orders')
         .update({ delivery_person_id: user.id })
         .eq('id', order.id)
 
-      if (updateError) throw updateError
+      if (updateError) {
+        console.error("Error al actualizar:", updateError)
+        throw new Error("No se pudo asignar la orden a tu cuenta.")
+      }
 
       toast.success("¡Orden auto-asignada exitosamente!")
       
-      // 3. Pasar al dashboard de bolsas
+      // 4. Pasar al dashboard de bolsas
       await loadOrderBags(order)
     } catch (err: any) {
-      toast.error(err.message || "Error al procesar el QR del cliente")
+      toast.error(err.message || "Error desconocido al procesar el QR")
       setStep("select")
     } finally {
       setLoading(false)
