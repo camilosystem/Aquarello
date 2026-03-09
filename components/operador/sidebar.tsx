@@ -65,7 +65,7 @@ export function Sidebar({ user, currentPath }: SidebarProps) {
           </div>
         ) : (
           <Image
-            src="/icon-512.png"
+            src="/icon-domi-512.png"
             alt="Lavva"
             width={100}
             height={40}
