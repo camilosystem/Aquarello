@@ -65,11 +65,11 @@ export function Sidebar({ user, currentPath }: SidebarProps) {
           </div>
         ) : (
           <Image
-            src="/logo-lavva.png"
+            src="/icon-512.png"
             alt="Lavva"
             width={100}
             height={40}
-            className="h-12 w-auto"
+            className="h-16 w-auto"
           />
         )}
       </div>
