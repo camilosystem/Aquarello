@@ -39,7 +39,7 @@ export function DomiciliarioHeader({ userName, pendingCount = 0 }: HeaderProps) 
             alt="Lavva"
             width={80}
             height={32}
-            className="h-16 w-auto"
+            className="h-20 w-auto"
           />
         </Link>
 
