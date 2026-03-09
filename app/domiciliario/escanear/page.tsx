@@ -90,18 +90,31 @@ function EscanearContent() {
   }
 
   // Escanear QR del Cliente (Auto-asignación)
+// Escanear QR del Cliente (Auto-asignación)
   const handleScanClientQR = async (qrResult: string) => {
     setLoading(true)
     try {
+      // Limpiamos espacios invisibles que a veces agregan las cámaras
+      const cleanQR = qrResult.trim()
+      
+      // Te mostramos exactamente qué leyó la cámara para estar seguros
+      toast.info(`Código leído: ${cleanQR}`)
+
       // 1. Buscar la orden por el código QR
       const { data: order, error } = await supabase
         .from("orders")
         .select("*, cliente:profiles!user_id(full_name, phone)")
-        .eq("qr_code", qrResult)
+        .eq("qr_code", cleanQR)
         .single()
 
-      if (error || !order) throw new Error("No se encontró ninguna orden con este código QR")
-      if (order.status !== 'pendiente') throw new Error(`Esta orden ya está en estado: ${order.status}`)
+      if (error || !order) {
+        console.error("Error de Supabase:", error)
+        throw new Error("No se encontró ninguna orden con este código QR")
+      }
+      
+      if (order.status !== 'pendiente') {
+        throw new Error(`Esta orden ya está en estado: ${order.status}`)
+      }
 
       // 2. Auto-asignar la orden a este domiciliario
       const { error: updateError } = await supabase
