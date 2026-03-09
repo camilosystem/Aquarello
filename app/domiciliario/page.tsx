@@ -27,30 +27,62 @@ export default function DomiciliarioPage() {
   const [activeTab, setActiveTab] = useState<"pickup" | "delivery">("pickup")
   const supabase = createClient()
 
-  useEffect(() => {
-    async function loadData() {
+  async function loadData() {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
 
       if (user) {
-        // Load assigned pickup tasks for this delivery person
-       // Load assigned pickup tasks for this delivery person
-        const { data: pickups } = await supabase
+        // 1. Traemos las órdenes de forma segura (sin joins complejos)
+        const { data: pickups, error: err1 } = await supabase
           .from("orders")
-          .select("*, cliente:profiles!user_id(full_name, phone)")
+          .select("*")
           .eq("delivery_person_id", user.id)
           .in("status", ["pendiente", "recogido", "en_deposito"])
           .order("created_at", { ascending: true })
 
-        const { data: deliveries } = await supabase
+        const { data: deliveries, error: err2 } = await supabase
           .from("orders")
-          .select("*, cliente:profiles!user_id(full_name, phone)")
+          .select("*")
           .eq("delivery_person_id", user.id)
           .in("status", ["listo", "en_ruta_entrega", "entregado"])
           .order("created_at", { ascending: true })
 
-        setPickupOrders(pickups || [])
-        setDeliveryOrders(deliveries || [])
+        if (err1) console.error("Error recogidas:", err1)
+        if (err2) console.error("Error entregas:", err2)
+
+        // 2. Función infalible para inyectar los datos del cliente a cada orden
+        const attachProfiles = async (ordersList: any[]) => {
+          if (!ordersList || ordersList.length === 0) return []
+          
+          // Extraemos los IDs de los clientes sin repetir
+          const userIds = [...new Set(ordersList.map(o => o.user_id).filter(Boolean))]
+          if (userIds.length === 0) return ordersList
+
+          // Buscamos sus perfiles
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, full_name, phone")
+            .in("id", userIds)
+
+          // Creamos un diccionario rápido de perfiles
+          const profilesMap = (profiles || []).reduce((acc: any, p: any) => {
+            acc[p.id] = p
+            return acc
+          }, {})
+
+          // Combinamos la orden con su cliente respectivo
+          return ordersList.map(o => ({
+            ...o,
+            cliente: profilesMap[o.user_id] || { full_name: 'Cliente sin nombre', phone: '' }
+          }))
+        }
+
+        // 3. Aplicamos la mezcla y guardamos
+        const pickupsWithClient = await attachProfiles(pickups || [])
+        const deliveriesWithClient = await attachProfiles(deliveries || [])
+
+        setPickupOrders(pickupsWithClient)
+        setDeliveryOrders(deliveriesWithClient)
       }
 
       setLoading(false)
