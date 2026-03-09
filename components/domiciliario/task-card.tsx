@@ -32,8 +32,8 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
   const address = isPickup ? order.pickup_address : (order.delivery_address || order.pickup_address)
   
   // Extraemos nombre y teléfono del cruce con la tabla profiles
-  const customerName = order.profiles?.full_name || 'Cliente sin nombre'
-  const customerPhone = order.profiles?.phone || ''
+  const customerName = order.cliente?.full_name || 'Cliente sin nombre'
+  const customerPhone = order.cliente?.phone || ''
 
   const handleNavigate = () => {
     const lat = isPickup ? order.pickup_lat : order.delivery_lat

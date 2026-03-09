@@ -37,14 +37,14 @@ export default function DomiciliarioPage() {
        // Load assigned pickup tasks for this delivery person
         const { data: pickups } = await supabase
           .from("orders")
-          .select("*, profiles(full_name, phone)")
+          .select("*, cliente:profiles!user_id(full_name, phone)")
           .eq("delivery_person_id", user.id)
           .in("status", ["pendiente", "recogido", "en_deposito"])
           .order("created_at", { ascending: true })
 
         const { data: deliveries } = await supabase
           .from("orders")
-          .select("*, profiles(full_name, phone)")
+          .select("*, cliente:profiles!user_id(full_name, phone)")
           .eq("delivery_person_id", user.id)
           .in("status", ["listo", "en_ruta_entrega", "entregado"])
           .order("created_at", { ascending: true })
