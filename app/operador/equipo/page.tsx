@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { createClient as createIsolatedClient } from '@supabase/supabase-js' // Importamos el cliente clon
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/operador/sidebar'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -48,12 +49,15 @@ export default function EquipoPage() {
   const supabase = createClient()
 
   useEffect(() => {
+    // Hemos sacado a supabase de las dependencias para evitar el ciclo infinito que te expulsaba
     const loadTeam = async () => {
-      if (!supabase) { router.push('/operador/login'); return }
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/operador/login'); return }
+      if (!user) { 
+        router.push('/operador/login')
+        return 
+      }
 
-      // Check if user is admin
+      // Check if user is admin or operador
       const { data: profile } = await supabase
         .from('profiles')
         .select('*')
@@ -61,7 +65,7 @@ export default function EquipoPage() {
         .single()
 
       if (profile?.role !== 'admin' && profile?.role !== 'operador') {
-        router.push('/operador')
+        router.push('/operador/login')
         return
       }
 
@@ -79,7 +83,7 @@ export default function EquipoPage() {
     }
 
     loadTeam()
-  }, [router, supabase])
+  }, [router])
 
   const handleCreateMember = async () => {
     if (!formData.email || !formData.password || !formData.full_name) {
@@ -89,23 +93,29 @@ export default function EquipoPage() {
 
     setSaving(true)
     try {
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // EL TRUCO MAESTRO: Creamos un clon de Supabase que NO guarda la sesión en tu navegador
+      const isolatedSupabase = createIsolatedClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+      )
+
+      // Create auth user con el cliente aislado para que no te cierre la sesión
+      const { data: authData, error: authError } = await isolatedSupabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           data: {
             full_name: formData.full_name,
             role: formData.role
-          },
-          emailRedirectTo: `${window.location.origin}/operador`
+          }
         }
       })
 
       if (authError) throw authError
 
       if (authData.user) {
-        // Profile will be created by the trigger, but we update it with extra info
+        // Actualizamos el perfil usando tu cliente principal (que sí tiene tu sesión de operador autorizada)
         await supabase
           .from('profiles')
           .update({
@@ -115,7 +125,7 @@ export default function EquipoPage() {
           })
           .eq('id', authData.user.id)
 
-        toast.success('Miembro creado exitosamente. Se envió un email de confirmación.')
+        toast.success('Miembro creado exitosamente.')
         
         // Refresh team list
         const { data: newTeam } = await supabase
@@ -129,9 +139,8 @@ export default function EquipoPage() {
 
       setIsDialogOpen(false)
       setFormData({ email: '', password: '', full_name: '', phone: '', role: 'operador' })
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      toast.error('Error al crear miembro: ' + errorMessage)
+    } catch (error: any) {
+      toast.error('Error al crear miembro: ' + (error.message || 'Error desconocido'))
     }
     setSaving(false)
   }
@@ -174,7 +183,7 @@ export default function EquipoPage() {
     try {
       await supabase
         .from('profiles')
-        .update({ role: 'cliente' }) // Soft delete - just change role
+        .update({ role: 'cliente' }) // Soft delete
         .eq('id', member.id)
 
       toast.success('Miembro eliminado del equipo')
