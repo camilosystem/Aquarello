@@ -95,45 +95,61 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
     loadPhone()
   }, [userId, supabase])
 
-  // --- LÓGICA DE UBICACIÓN CORREGIDA CON GEOCODER OFICIAL ---
+  // --- LÓGICA DE UBICACIÓN CORREGIDA (CON LÍMITE DE TIEMPO Y MANEJO DE ERRORES) ---
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
       toast.error('Tu navegador no soporta geolocalización')
       return
     }
 
-    if (!isLoaded) {
+    if (!isLoaded || !window.google) {
       toast.error('Conectando con Google Maps, intenta de nuevo en un segundo...')
       return
     }
 
     setLocationLoading(true)
+    
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const lat = position.coords.latitude
-        const lng = position.coords.longitude
-        setCoordinates({ lat, lng })
+        try {
+          const lat = position.coords.latitude
+          const lng = position.coords.longitude
+          setCoordinates({ lat, lng })
 
-        // Usamos la clase oficial de Google Maps que respeta las reglas de seguridad
-        const geocoder = new window.google.maps.Geocoder()
-        
-        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-          if (status === 'OK' && results && results[0]) {
-            setAddress(results[0].formatted_address)
-            toast.success('Ubicación encontrada. ¡Verifica el número de apartamento/casa!')
-          } else {
-            console.error("Geocoding failed:", status)
-            toast.error('No pudimos traducir las coordenadas a una dirección exacta.')
-          }
+          // Usamos la clase oficial de Google Maps
+          const geocoder = new window.google.maps.Geocoder()
+          
+          geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+            if (status === 'OK' && results && results[0]) {
+              setAddress(results[0].formatted_address)
+              toast.success('Ubicación encontrada. ¡Verifica el número de apartamento/casa!')
+            } else {
+              console.error("Geocoding failed:", status)
+              toast.error('No pudimos traducir las coordenadas a una dirección exacta.')
+            }
+            setLocationLoading(false)
+          })
+        } catch (err) {
+          console.error("Error procesando mapas:", err)
+          toast.error('Ocurrió un error al procesar el mapa.')
           setLocationLoading(false)
-        })
+        }
       },
       (error) => {
         console.error("GPS Error:", error)
-        toast.error('No pudimos acceder a tu ubicación. Verifica los permisos de tu navegador.')
-        setLocationLoading(false)
+        setLocationLoading(false) // MUY IMPORTANTE: Apagar el looper
+        
+        // Explicar al usuario por qué falló
+        if (error.code === error.PERMISSION_DENIED) {
+          toast.error('Permiso denegado. Debes autorizar el uso del GPS en tu navegador (arriba en la barra de direcciones).')
+        } else if (error.code === error.TIMEOUT) {
+          toast.error('El GPS tardó demasiado en responder. Intenta de nuevo.')
+        } else {
+          toast.error('No pudimos acceder a tu ubicación exacta en este momento.')
+        }
       },
-      { enableHighAccuracy: true }
+      // CONFIGURACIÓN CLAVE: Darle máximo 10 segundos para responder y no colgarse
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
   }
 
@@ -260,7 +276,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
               ) : (
                 <LocateFixed className="mr-2 h-4 w-4" />
               )}
-              {isLoaded ? 'Usar mi ubicación actual' : 'Cargando mapas...'}
+              {isLoaded ? (locationLoading ? 'Buscando satélites...' : 'Usar mi ubicación actual') : 'Cargando mapas...'}
             </Button>
 
             <div className="space-y-2">
