@@ -41,34 +41,43 @@ export default function DomiciliarioPage() {
       setUser(user)
 
       if (user) {
-        // Configuramos los límites del mes seleccionado (Inicio al Fin del mes)
+        // 1. Traemos TODAS las órdenes del domiciliario de un solo golpe
+        const { data: allOrders, error } = await supabase
+          .from("orders")
+          .select("*")
+          .eq("delivery_person_id", user.id)
+          .order("created_at", { ascending: true })
+
+        if (error) console.error("Error trayendo órdenes:", error)
+
+        // 2. Extraemos el mes y año que el usuario quiere filtrar
         const [year, month] = filterMonth.split('-')
-        const startDate = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString()
-        const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59, 999).toISOString()
+        
+        // Listas de estados "Vivos"
+        const activePickupStatuses = ["pendiente", "recogido", "en_transito", "en_deposito"]
+        const activeDeliveryStatuses = ["listo", "en_ruta_entrega"]
 
-        // 1. Traemos las órdenes del mes completo
-        const { data: pickups, error: err1 } = await supabase
-          .from("orders")
-          .select("*")
-          .eq("delivery_person_id", user.id)
-          .in("status", ["pendiente", "recogido", "en_transito", "en_deposito"])
-          .gte("created_at", startDate)
-          .lte("created_at", endDate)
-          .order("created_at", { ascending: true })
+        // 3. Filtramos la lista inteligentemente
+        const filteredOrders = (allOrders || []).filter(order => {
+          const orderDate = new Date(order.created_at)
+          const orderMonth = String(orderDate.getMonth() + 1).padStart(2, '0')
+          const orderYear = String(orderDate.getFullYear())
+          const isSameMonth = orderMonth === month && orderYear === year
 
-        const { data: deliveries, error: err2 } = await supabase
-          .from("orders")
-          .select("*")
-          .eq("delivery_person_id", user.id)
-          .in("status", ["listo", "en_ruta_entrega", "entregado"])
-          .gte("created_at", startDate)
-          .lte("created_at", endDate)
-          .order("created_at", { ascending: true })
+          // REGLA DE ORO: Si está activa, la mostramos SIEMPRE. 
+          // Si ya se entregó o canceló, respetamos el filtro de mes.
+          if (activePickupStatuses.includes(order.status) || activeDeliveryStatuses.includes(order.status)) {
+            return true
+          }
+          
+          return isSameMonth
+        })
 
-        if (err1) console.error("Error recogidas:", err1)
-        if (err2) console.error("Error entregas:", err2)
+        // 4. Separamos en las dos pestañas
+        const pickups = filteredOrders.filter(o => activePickupStatuses.includes(o.status))
+        const deliveries = filteredOrders.filter(o => activeDeliveryStatuses.includes(o.status) || o.status === 'entregado')
 
-        // 2. Función para inyectar los datos del cliente
+        // 5. Inyectamos los datos del cliente
         const attachProfiles = async (ordersList: any[]) => {
           if (!ordersList || ordersList.length === 0) return []
           const userIds = [...new Set(ordersList.map(o => o.user_id).filter(Boolean))]
@@ -90,8 +99,8 @@ export default function DomiciliarioPage() {
           }))
         }
 
-        const pickupsWithClient = await attachProfiles(pickups || [])
-        const deliveriesWithClient = await attachProfiles(deliveries || [])
+        const pickupsWithClient = await attachProfiles(pickups)
+        const deliveriesWithClient = await attachProfiles(deliveries)
 
         setPickupOrders(pickupsWithClient)
         setDeliveryOrders(deliveriesWithClient)
@@ -113,7 +122,7 @@ export default function DomiciliarioPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase, filterMonth]) // Se recarga cuando cambia el mes
+  }, [supabase, filterMonth]) 
 
   const pickupCount = pickupOrders.length
   const deliveryCount = deliveryOrders.length
@@ -131,7 +140,6 @@ export default function DomiciliarioPage() {
       <DomiciliarioHeader user={user} />
       
       <main className="flex-1 flex flex-col pb-20">
-        {/* Stats & Filters Bar */}
         <div className="px-4 py-3 bg-card border-b flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -154,7 +162,6 @@ export default function DomiciliarioPage() {
             </div>
           </div>
           
-          {/* Filtro de Mes Nativo */}
           <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-md border w-max">
             <CalendarIcon className="h-4 w-4 text-muted-foreground ml-2 shrink-0" />
             <Input 
@@ -189,7 +196,7 @@ export default function DomiciliarioPage() {
               {pickupOrders.length === 0 ? (
                 <div className="text-center py-12">
                   <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                  <h3 className="font-medium text-lg">No hay recogidas para este mes</h3>
+                  <h3 className="font-medium text-lg">No hay recogidas activas o en este mes</h3>
                 </div>
               ) : (
                 pickupOrders.map((order) => (
@@ -210,7 +217,7 @@ export default function DomiciliarioPage() {
               {deliveryOrders.length === 0 ? (
                 <div className="text-center py-12">
                   <Bike className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                  <h3 className="font-medium text-lg">No hay entregas para este mes</h3>
+                  <h3 className="font-medium text-lg">No hay entregas activas o en este mes</h3>
                 </div>
               ) : (
                 deliveryOrders.map((order) => (
