@@ -3,7 +3,10 @@
 import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { MapPin, Phone, QrCode, Navigation, CheckCircle2, Scale, Loader2, ChevronDown, ChevronUp, User } from 'lucide-react'
+import { 
+  MapPin, Phone, QrCode, Navigation, CheckCircle2, Scale, 
+  Loader2, ChevronDown, ChevronUp, User, Truck, Store 
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -12,11 +15,11 @@ import { Label } from '@/components/ui/label'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { STATUS_LABELS, type Order, type OrderStatus } from '@/lib/types'
+import { STATUS_LABELS, type OrderStatus } from '@/lib/types'
 import { useRouter } from 'next/navigation'
 
 interface TaskCardProps {
-  order: any // Usamos any temporalmente para aceptar los datos anidados de profiles
+  order: any 
   type: 'pickup' | 'delivery'
   onUpdate?: () => void
 }
@@ -31,7 +34,6 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
   const isPickup = type === 'pickup'
   const address = isPickup ? order.pickup_address : (order.delivery_address || order.pickup_address)
   
-  // Extraemos nombre y teléfono del cruce con la tabla profiles
   const customerName = order.cliente?.full_name || 'Cliente sin nombre'
   const customerPhone = order.cliente?.phone || ''
 
@@ -46,6 +48,7 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
     }
   }
 
+  // Confirmar la recogida inicial y guardar el peso
   const handlePickup = async () => {
     if (!weight || parseFloat(weight) <= 0) {
       toast.error('Ingresa el peso de la bolsa')
@@ -56,7 +59,6 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       
-      // Actualizamos con la columna correcta: actual_weight
       const { error: orderError } = await supabase
         .from('orders')
         .update({
@@ -86,7 +88,8 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
     }
   }
 
-  const handleDeliver = async () => {
+  // Función general para actualizar estados rápidos (Tránsito, Depósito, Entregado)
+  const handleUpdateStatus = async (newStatus: OrderStatus, successMessage: string, historyNote: string) => {
     setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -94,7 +97,7 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
       const { error: orderError } = await supabase
         .from('orders')
         .update({
-          status: 'entregado' as OrderStatus,
+          status: newStatus,
           updated_at: new Date().toISOString(),
         })
         .eq('id', order.id)
@@ -103,29 +106,29 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
 
       await supabase.from('order_history').insert({
         order_id: order.id,
-        status: 'entregado',
-        notes: 'Entregado al cliente por domiciliario',
+        status: newStatus,
+        notes: historyNote,
         changed_by: user?.id,
       })
 
-      toast.success('Entrega completada')
+      toast.success(successMessage)
       onUpdate?.()
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error)
-      toast.error('Error al procesar la entrega')
+      toast.error('Error al actualizar el estado')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden border-border/50 shadow-sm hover:border-primary/30 transition-colors">
       <Collapsible open={expanded} onOpenChange={setExpanded}>
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className={isPickup ? 'border-primary text-primary' : 'border-green-500 text-green-600'}>
+                <Badge variant="outline" className={isPickup ? 'border-primary text-primary bg-primary/5' : 'border-green-500 text-green-600 bg-green-500/5'}>
                   {isPickup ? 'Recogida' : 'Entrega'}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
@@ -138,7 +141,6 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                 {order.qr_code}
               </div>
 
-              {/* Datos del Cliente */}
               <div className="flex items-center gap-2 text-sm font-medium mb-1 text-foreground">
                 <User className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="line-clamp-1">{customerName}</span>
@@ -168,8 +170,7 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
               </Button>
             )}
             
-            {/* Nuevo botón para ir al escáner asignando esta orden */}
-            <Button size="sm" onClick={() => router.push(`/domiciliario/escanear?orderId=${order.id}`)}>
+            <Button size="sm" variant="secondary" onClick={() => router.push(`/domiciliario/escanear?orderId=${order.id}`)}>
               <QrCode className="h-4 w-4" />
             </Button>
           </div>
@@ -178,8 +179,10 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
             <div className="mt-4 pt-4 border-t space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Estado:</span>
-                  <p className="font-medium">{STATUS_LABELS[order.status as OrderStatus] || order.status}</p>
+                  <span className="text-muted-foreground">Estado Actual:</span>
+                  <p className="font-medium capitalize text-primary">
+                    {STATUS_LABELS[order.status as OrderStatus] || order.status.replace('_', ' ')}
+                  </p>
                 </div>
                 {order.actual_weight && (
                   <div>
@@ -189,32 +192,69 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                 )}
               </div>
 
-              {isPickup && order.status === 'pendiente' && (
+              {/* ACCIONES DE RECOGIDA */}
+              {isPickup && (
                 <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label htmlFor={`weight-${order.id}`} className="flex items-center gap-2">
-                      <Scale className="h-4 w-4" />
-                      Peso de la ropa total (kg)
-                    </Label>
-                    <Input
-                      id={`weight-${order.id}`}
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      placeholder="Ej: 3.5"
-                      value={weight}
-                      onChange={(e) => setWeight(e.target.value)}
-                    />
-                  </div>
-                  <Button className="w-full" onClick={handlePickup} disabled={loading}>
-                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                    Confirmar Recogida
-                  </Button>
+                  {/* Fase 1: Recoger */}
+                  {order.status === 'pendiente' && (
+                    <>
+                      <div className="space-y-2">
+                        <Label htmlFor={`weight-${order.id}`} className="flex items-center gap-2">
+                          <Scale className="h-4 w-4" />
+                          Peso total al recoger (kg)
+                        </Label>
+                        <Input
+                          id={`weight-${order.id}`}
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder="Ej: 3.5"
+                          value={weight}
+                          onChange={(e) => setWeight(e.target.value)}
+                        />
+                      </div>
+                      <Button className="w-full" onClick={handlePickup} disabled={loading}>
+                        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                        Confirmar Recogida
+                      </Button>
+                    </>
+                  )}
+
+                  {/* Fase 2: En tránsito y En Depósito (Solo aparecen si ya se recogió) */}
+                  {(order.status === 'recogido' || order.status === 'en_transito') && (
+                    <div className="flex flex-col gap-2 pt-2 border-t border-dashed">
+                      <p className="text-xs text-muted-foreground mb-1 text-center">Fase de traslado a lavandería</p>
+                      
+                      {order.status === 'recogido' && (
+                        <Button 
+                          variant="outline" 
+                          className="w-full bg-orange-50 hover:bg-orange-100 hover:text-orange-700 text-orange-600 border-orange-200"
+                          onClick={() => handleUpdateStatus('en_transito' as OrderStatus, 'Orden marcada en tránsito', 'Domiciliario en camino hacia la lavandería')}
+                          disabled={loading}
+                        >
+                          <Truck className="mr-2 h-4 w-4" />
+                          Marcar "En Tránsito"
+                        </Button>
+                      )}
+
+                      <Button 
+                        className="w-full bg-indigo-600 hover:bg-indigo-700"
+                        onClick={() => handleUpdateStatus('en_deposito' as OrderStatus, 'Ropa entregada en depósito', 'Ropa entregada en las instalaciones de la lavandería')}
+                        disabled={loading}
+                      >
+                        <Store className="mr-2 h-4 w-4" />
+                        Entregar en Lavandería (En Depósito)
+                      </Button>
+                    </div>
+                  )}
                 </div>
               )}
 
+              {/* ACCIONES DE ENTREGA */}
               {!isPickup && order.status === 'en_ruta_entrega' && (
-                <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleDeliver} disabled={loading}>
+                <Button className="w-full bg-green-600 hover:bg-green-700" 
+                  onClick={() => handleUpdateStatus('entregado' as OrderStatus, 'Entrega completada', 'Entregado al cliente por domiciliario')} 
+                  disabled={loading}>
                   {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                   Confirmar Entrega
                 </Button>
