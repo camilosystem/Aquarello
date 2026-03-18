@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { 
   Shirt, Droplets, Sparkles, Wind, Palette, 
-  Timer, Star, AlertTriangle, Loader2, MapPin
+  Timer, Star, AlertTriangle, Loader2, MapPin, LocateFixed, Phone
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -68,13 +68,72 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
+  const [locationLoading, setLocationLoading] = useState(false)
   const [step, setStep] = useState(1)
+  
+  // Datos del Cliente
   const [address, setAddress] = useState(userAddress || '')
+  const [phone, setPhone] = useState('')
+  const [coordinates, setCoordinates] = useState<{lat: number, lng: number} | null>(null)
+  
   const [preferences, setPreferences] = useState<WashingPreferences>(DEFAULT_PREFERENCES)
 
-  // Estimate price based on average weight (5kg) + services
+  // Cargar teléfono si ya existe en el perfil
+  useEffect(() => {
+    async function loadPhone() {
+      const { data } = await supabase.from('profiles').select('phone').eq('id', userId).single()
+      if (data?.phone) setPhone(data.phone)
+    }
+    loadPhone()
+  }, [userId, supabase])
+
+  // --- LÓGICA DE UBICACIÓN Y GOOGLE MAPS ---
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Tu navegador no soporta geolocalización')
+      return
+    }
+
+    setLocationLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude
+        const lng = position.coords.longitude
+        setCoordinates({ lat, lng })
+
+        try {
+          // Usamos la API de Geocoding de Google para traducir las coordenadas a texto
+          const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+          const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`)
+          const data = await response.json()
+
+          if (data.results && data.results.length > 0) {
+            // Obtenemos la dirección más precisa que devuelve Google
+            const formattedAddress = data.results[0].formatted_address
+            setAddress(formattedAddress)
+            toast.success('Dirección encontrada. ¡Por favor añade tu número de apartamento si aplica!')
+          } else {
+            toast.error('No pudimos traducir las coordenadas a una dirección exacta.')
+          }
+        } catch (error) {
+          console.error("Error geocoding:", error)
+          toast.error('Error al conectar con Google Maps.')
+        } finally {
+          setLocationLoading(false)
+        }
+      },
+      (error) => {
+        console.error("GPS Error:", error)
+        toast.error('No pudimos acceder a tu ubicación. Verifica los permisos de tu celular.')
+        setLocationLoading(false)
+      },
+      { enableHighAccuracy: true }
+    )
+  }
+
+  // Estimate price
   const estimatePrice = () => {
-    let total = PRICE_PER_KG * 5 // Base: 5kg estimate
+    let total = PRICE_PER_KG * 5
     if (preferences.ironingRequired) total += ADDITIONAL_PRICES.ironing
     if (preferences.useBleach) total += ADDITIONAL_PRICES.bleach
     if (preferences.useDegreaser) total += ADDITIONAL_PRICES.degreaser
@@ -88,23 +147,33 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
     setPreferences(prev => ({ ...prev, [key]: value }))
   }
 
-  const handleSubmit = async () => {
+  const handleContinueToStep2 = () => {
     if (!address.trim()) {
-      toast.error('Por favor ingresa tu direccion de recogida')
+      toast.error('Por favor ingresa tu dirección de recogida')
       return
     }
+    if (!phone.trim() || phone.length < 7) {
+      toast.error('Por favor ingresa un número de teléfono válido')
+      return
+    }
+    setStep(2)
+  }
 
+  const handleSubmit = async () => {
     if (!supabase) {
-      toast.error('Error de conexion. Por favor recarga la pagina.')
+      toast.error('Error de conexión. Por favor recarga la página.')
       return
     }
 
     setLoading(true)
     try {
+      // Actualizar el teléfono en el perfil del usuario si lo cambió
+      await supabase.from('profiles').update({ phone }).eq('id', userId)
+
       const qrCode = generateQRCode()
       const estimatedPrice = estimatePrice()
 
-      // Create order
+      // Create order con coordenadas reales
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -112,6 +181,8 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
           user_id: userId,
           status: 'pendiente',
           pickup_address: address,
+          pickup_lat: coordinates?.lat || null, // Guardamos la latitud exacta si existe
+          pickup_lng: coordinates?.lng || null, // Guardamos la longitud exacta si existe
           base_price: estimatedPrice,
           total_price: estimatedPrice,
           notes: preferences.notes || null,
@@ -146,7 +217,6 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
         changed_by: userId,
       })
 
-      // Redirect to success page
       router.push(`/cliente/pedido-creado?id=${order.id}`)
     } catch (error) {
       console.error('Error creating order:', error)
@@ -165,35 +235,70 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
         <div className={`h-2 w-16 rounded-full transition-colors ${step >= 3 ? 'bg-primary' : 'bg-muted'}`} />
       </div>
 
-      {/* Step 1: Address */}
+      {/* Step 1: Address & Phone */}
       {step === 1 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="h-5 w-5 text-primary" />
-              Dirección de Recogida
+              Datos de Recogida
             </CardTitle>
             <CardDescription>
-              Ingresa la dirección donde recogeremos tu ropa
+              ¿A dónde debemos ir y cómo podemos contactarte?
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            
+            {/* GPS Location Button */}
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
+              onClick={handleGetLocation}
+              disabled={locationLoading}
+            >
+              {locationLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <LocateFixed className="mr-2 h-4 w-4" />
+              )}
+              Usar mi ubicación actual
+            </Button>
+
             <div className="space-y-2">
-              <Label htmlFor="address">Dirección completa</Label>
+              <Label htmlFor="address">Dirección de recogida *</Label>
               <Textarea
                 id="address"
-                placeholder="Ej: Calle 100 #15-20, Apto 501, Bogotá"
+                placeholder="Ej: Calle 100 #15-20, Apto 501, Conjunto Los Pinos"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 rows={3}
+                className="resize-none"
               />
+              <p className="text-[11px] text-muted-foreground">Por favor verifica y completa el número de apartamento o casa.</p>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Teléfono de contacto *</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="Ej: 3001234567"
+                  className="pl-9"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </div>
+            </div>
+
             <Button 
-              className="w-full" 
-              onClick={() => setStep(2)}
-              disabled={!address.trim()}
+              className="w-full mt-4" 
+              onClick={handleContinueToStep2}
+              disabled={!address.trim() || !phone.trim()}
             >
-              Continuar
+              Continuar a preferencias
             </Button>
           </CardContent>
         </Card>
@@ -212,7 +317,6 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Main preferences */}
             <div className="grid gap-4">
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
@@ -299,7 +403,6 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
               </div>
             </div>
 
-            {/* Fragrance selection */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Palette className="h-5 w-5 text-primary" />
@@ -395,7 +498,10 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                 <p className="text-muted-foreground">
                   <span className="font-medium text-foreground">Dirección:</span> {address}
                 </p>
-                <div className="flex justify-between">
+                <p className="text-muted-foreground">
+                  <span className="font-medium text-foreground">Teléfono:</span> {phone}
+                </p>
+                <div className="flex justify-between mt-2">
                   <span>Base (estimado 5kg):</span>
                   <span>{formatCOP(PRICE_PER_KG * 5)}</span>
                 </div>
