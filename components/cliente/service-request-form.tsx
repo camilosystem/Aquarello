@@ -23,6 +23,9 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { FRAGRANCE_OPTIONS, generateQRCode, formatCOP } from '@/lib/types'
 
+// Importamos el cargador oficial de Google Maps
+import { useJsApiLoader } from '@react-google-maps/api'
+
 interface ServiceRequestFormProps {
   userId: string
   userAddress?: string | null
@@ -67,18 +70,23 @@ const ADDITIONAL_PRICES = {
 export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormProps) {
   const router = useRouter()
   const supabase = createClient()
+  
+  // Cargamos la API de Google Maps de forma segura
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '', 
+  })
+
   const [loading, setLoading] = useState(false)
   const [locationLoading, setLocationLoading] = useState(false)
   const [step, setStep] = useState(1)
   
-  // Datos del Cliente
   const [address, setAddress] = useState(userAddress || '')
   const [phone, setPhone] = useState('')
   const [coordinates, setCoordinates] = useState<{lat: number, lng: number} | null>(null)
   
   const [preferences, setPreferences] = useState<WashingPreferences>(DEFAULT_PREFERENCES)
 
-  // Cargar teléfono si ya existe en el perfil
   useEffect(() => {
     async function loadPhone() {
       const { data } = await supabase.from('profiles').select('phone').eq('id', userId).single()
@@ -87,51 +95,48 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
     loadPhone()
   }, [userId, supabase])
 
-  // --- LÓGICA DE UBICACIÓN Y GOOGLE MAPS ---
+  // --- LÓGICA DE UBICACIÓN CORREGIDA CON GEOCODER OFICIAL ---
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
       toast.error('Tu navegador no soporta geolocalización')
       return
     }
 
+    if (!isLoaded) {
+      toast.error('Conectando con Google Maps, intenta de nuevo en un segundo...')
+      return
+    }
+
     setLocationLoading(true)
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         const lat = position.coords.latitude
         const lng = position.coords.longitude
         setCoordinates({ lat, lng })
 
-        try {
-          // Usamos la API de Geocoding de Google para traducir las coordenadas a texto
-          const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-          const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`)
-          const data = await response.json()
-
-          if (data.results && data.results.length > 0) {
-            // Obtenemos la dirección más precisa que devuelve Google
-            const formattedAddress = data.results[0].formatted_address
-            setAddress(formattedAddress)
-            toast.success('Dirección encontrada. ¡Por favor añade tu número de apartamento si aplica!')
+        // Usamos la clase oficial de Google Maps que respeta las reglas de seguridad
+        const geocoder = new window.google.maps.Geocoder()
+        
+        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+          if (status === 'OK' && results && results[0]) {
+            setAddress(results[0].formatted_address)
+            toast.success('Ubicación encontrada. ¡Verifica el número de apartamento/casa!')
           } else {
+            console.error("Geocoding failed:", status)
             toast.error('No pudimos traducir las coordenadas a una dirección exacta.')
           }
-        } catch (error) {
-          console.error("Error geocoding:", error)
-          toast.error('Error al conectar con Google Maps.')
-        } finally {
           setLocationLoading(false)
-        }
+        })
       },
       (error) => {
         console.error("GPS Error:", error)
-        toast.error('No pudimos acceder a tu ubicación. Verifica los permisos de tu celular.')
+        toast.error('No pudimos acceder a tu ubicación. Verifica los permisos de tu navegador.')
         setLocationLoading(false)
       },
       { enableHighAccuracy: true }
     )
   }
 
-  // Estimate price
   const estimatePrice = () => {
     let total = PRICE_PER_KG * 5
     if (preferences.ironingRequired) total += ADDITIONAL_PRICES.ironing
@@ -167,13 +172,11 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
 
     setLoading(true)
     try {
-      // Actualizar el teléfono en el perfil del usuario si lo cambió
       await supabase.from('profiles').update({ phone }).eq('id', userId)
 
       const qrCode = generateQRCode()
       const estimatedPrice = estimatePrice()
 
-      // Create order con coordenadas reales
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -181,8 +184,8 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
           user_id: userId,
           status: 'pendiente',
           pickup_address: address,
-          pickup_lat: coordinates?.lat || null, // Guardamos la latitud exacta si existe
-          pickup_lng: coordinates?.lng || null, // Guardamos la longitud exacta si existe
+          pickup_lat: coordinates?.lat || null,
+          pickup_lng: coordinates?.lng || null,
           base_price: estimatedPrice,
           total_price: estimatedPrice,
           notes: preferences.notes || null,
@@ -192,7 +195,6 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
 
       if (orderError) throw orderError
 
-      // Create preferences
       const { error: prefError } = await supabase
         .from('order_preferences')
         .insert({
@@ -209,7 +211,6 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
 
       if (prefError) throw prefError
 
-      // Create initial history
       await supabase.from('order_history').insert({
         order_id: order.id,
         status: 'pendiente',
@@ -228,14 +229,12 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
 
   return (
     <div className="space-y-4 pb-24">
-      {/* Step indicator */}
       <div className="flex items-center justify-center gap-2">
         <div className={`h-2 w-16 rounded-full transition-colors ${step >= 1 ? 'bg-primary' : 'bg-muted'}`} />
         <div className={`h-2 w-16 rounded-full transition-colors ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
         <div className={`h-2 w-16 rounded-full transition-colors ${step >= 3 ? 'bg-primary' : 'bg-muted'}`} />
       </div>
 
-      {/* Step 1: Address & Phone */}
       {step === 1 && (
         <Card>
           <CardHeader>
@@ -249,20 +248,19 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
           </CardHeader>
           <CardContent className="space-y-4">
             
-            {/* GPS Location Button */}
             <Button 
               type="button" 
               variant="outline" 
               className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 border-blue-200"
               onClick={handleGetLocation}
-              disabled={locationLoading}
+              disabled={locationLoading || !isLoaded}
             >
               {locationLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <LocateFixed className="mr-2 h-4 w-4" />
               )}
-              Usar mi ubicación actual
+              {isLoaded ? 'Usar mi ubicación actual' : 'Cargando mapas...'}
             </Button>
 
             <div className="space-y-2">
@@ -304,7 +302,6 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
         </Card>
       )}
 
-      {/* Step 2: Washing Preferences */}
       {step === 2 && (
         <Card>
           <CardHeader>
@@ -437,7 +434,6 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
         </Card>
       )}
 
-      {/* Step 3: Additional options and confirmation */}
       {step === 3 && (
         <Card>
           <CardHeader>
@@ -491,7 +487,6 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
               />
             </div>
 
-            {/* Summary */}
             <div className="rounded-lg bg-muted/50 p-4 space-y-3">
               <h4 className="font-semibold">Resumen del pedido</h4>
               <div className="text-sm space-y-1">
