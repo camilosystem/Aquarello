@@ -6,7 +6,6 @@ import { Navigation } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-// Default center: Bogotá, Colombia
 const defaultCenter = { lat: 4.7110, lng: -74.0721 }
 
 interface DeliveryMapProps {
@@ -17,7 +16,6 @@ interface DeliveryMapProps {
 }
 
 export function DeliveryMap({ orders, currentLocation, onOrderClick, className }: DeliveryMapProps) {
-  // Carga de la API de Google Maps con la clave de entorno
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '', 
@@ -26,19 +24,16 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
 
-  // Usamos useMemo para que el centro no se recalcule innecesariamente
   const center = useMemo(() => {
     return currentLocation ? { lat: currentLocation.lat, lng: currentLocation.lng } : defaultCenter
   }, [currentLocation])
 
-  // Estilo del contenedor forzando altura
   const mapContainerStyle = useMemo(() => ({
     width: '100%',
-    height: '100%', // Esto es crucial
+    height: '100%', 
     borderRadius: '0.5rem'
   }), [])
 
-  // Ajustar cámara automáticamente para ver todos los puntos
   const onLoad = useCallback(function callback(map: google.maps.Map) {
     const bounds = new window.google.maps.LatLngBounds()
     let hasMarkers = false
@@ -61,7 +56,6 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
 
     if (hasMarkers) {
       map.fitBounds(bounds)
-      // Evitar zoom excesivo
       const listener = google.maps.event.addListener(map, "idle", function() { 
         if (map.getZoom()! > 16) map.setZoom(16); 
         google.maps.event.removeListener(listener); 
@@ -85,7 +79,6 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
     }
   }
 
-  // Separar órdenes válidas
   const pickupOrders = useMemo(() => orders.filter(o => {
     const isPickup = ['pendiente', 'recogido', 'en_transito', 'en_deposito'].includes(o.status)
     return isPickup && o.pickup_lat && o.pickup_lng
@@ -95,8 +88,6 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
     const isDelivery = ['listo', 'en_ruta_entrega'].includes(o.status)
     return isDelivery && o.delivery_lat && o.delivery_lng
   }), [orders])
-
-  // -- MANEJO DE ESTADOS DE CARGA --
 
   if (loadError) {
     return (
@@ -118,8 +109,6 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
     )
   }
 
-  // -- RENDERIZADO DEL MAPA CUANDO ESTÁ LISTO --
-
   return (
     <div className={cn("relative h-full w-full", className)} style={{ minHeight: '300px' }}>
       <GoogleMap
@@ -136,7 +125,6 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
           fullscreenControl: false,
         }}
       >
-        {/* Marcador del Domiciliario */}
         {currentLocation && (
           <Marker
             position={currentLocation}
@@ -152,7 +140,7 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
           />
         )}
 
-        {/* Marcadores de Recogida */}
+        {/* -- AQUÍ ARREGLÉ LOS ICONOS FALSOS -- */}
         {pickupOrders.map((order) => {
           const position = { lat: Number(order.pickup_lat), lng: Number(order.pickup_lng) }
           return (
@@ -168,7 +156,6 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
           )
         })}
 
-        {/* Marcadores de Entrega */}
         {deliveryOrders.map((order) => {
           const position = { lat: Number(order.delivery_lat), lng: Number(order.delivery_lng) }
           return (
@@ -184,7 +171,6 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
           )
         })}
 
-        {/* Ventana de información */}
         {selectedOrder && (
           <InfoWindow
             position={selectedOrder.position}
@@ -203,20 +189,21 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
               <div className="text-xs text-muted-foreground mb-2 line-clamp-2">
                 {selectedOrder.type === 'pickup' ? selectedOrder.pickup_address : selectedOrder.delivery_address}
               </div>
+              
+              {/* -- AQUÍ ARREGLÉ EL ENLACE PARA ABRIR LA RUTA EN GOOGLE MAPS -- */}
               <a 
                 href={`https://www.google.com/maps/dir/?api=1&destination=${selectedOrder.position.lat},${selectedOrder.position.lng}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-white bg-blue-600 px-3 py-1.5 rounded block text-center mt-2 hover:bg-blue-700 font-medium"
               >
-                Navegar aquí
+                Trazar ruta
               </a>
             </div>
           </InfoWindow>
         )}
       </GoogleMap>
 
-      {/* Botón flotante para centrar */}
       {currentLocation && (
         <Button
           size="icon"
@@ -227,7 +214,6 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
         </Button>
       )}
 
-      {/* Leyenda superior */}
       <div className="absolute top-4 left-4 z-[10] bg-card/95 backdrop-blur rounded-lg p-3 shadow-lg border">
         <div className="space-y-2 text-xs font-medium">
           <div className="flex items-center gap-2">

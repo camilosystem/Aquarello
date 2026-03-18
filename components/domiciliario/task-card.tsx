@@ -37,14 +37,15 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
   const customerName = order.cliente?.full_name || 'Cliente sin nombre'
   const customerPhone = order.cliente?.phone || ''
 
+  // -- AQUÍ ESTÁ EL ARREGLO DE LA NAVEGACIÓN --
   const handleNavigate = () => {
     const lat = isPickup ? order.pickup_lat : order.delivery_lat
     const lng = isPickup ? order.pickup_lng : order.delivery_lng
     
     if (lat && lng) {
-      window.open(`http://googleusercontent.com/maps.google.com/?q=${lat},${lng}`, '_blank')
+      window.open(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`, '_blank')
     } else {
-      window.open(`http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(address)}`, '_blank')
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank')
     }
   }
 
@@ -209,7 +210,6 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                     <div className="flex flex-col gap-2 pt-2 border-t border-dashed">
                       <p className="text-xs text-muted-foreground mb-1 text-center">Fase de traslado a lavandería</p>
                       
-                      {/* Si está "Recogido", puede pasarlo a "En Tránsito" o directo a "En Depósito" */}
                       {order.status === 'recogido' && (
                         <>
                           <Button 
@@ -230,7 +230,6 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                         </>
                       )}
 
-                      {/* Si está "En Tránsito", puede Deshacerlo o pasarlo a "En Depósito" */}
                       {order.status === 'en_transito' && (
                         <>
                           <Button 
@@ -250,7 +249,6 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                         </>
                       )}
 
-                      {/* Si está "En Depósito", puede Deshacerlo y regresar a "En Tránsito" */}
                       {order.status === 'en_deposito' && (
                         <Button 
                           variant="ghost" size="sm" className="text-muted-foreground"
