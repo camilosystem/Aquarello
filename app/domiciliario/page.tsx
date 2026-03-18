@@ -25,8 +25,13 @@ export default function DomiciliarioPage() {
   const [view, setView] = useState<"map" | "list">("list")
   const [activeTab, setActiveTab] = useState<"pickup" | "delivery">("pickup")
   
-  // Estado para el filtro de fecha (Por defecto: Hoy)
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
+  // Estado para el filtro de mes (Por defecto: Mes actual YYYY-MM)
+  const [filterMonth, setFilterMonth] = useState(() => {
+    const today = new Date()
+    const yyyy = today.getFullYear()
+    const mm = String(today.getMonth() + 1).padStart(2, '0')
+    return `${yyyy}-${mm}`
+  })
   
   const supabase = createClient()
 
@@ -36,18 +41,19 @@ export default function DomiciliarioPage() {
       setUser(user)
 
       if (user) {
-        // Configuramos los límites del día seleccionado
-        const startOfDay = new Date(`${filterDate}T00:00:00`).toISOString()
-        const endOfDay = new Date(`${filterDate}T23:59:59.999`).toISOString()
+        // Configuramos los límites del mes seleccionado (Inicio al Fin del mes)
+        const [year, month] = filterMonth.split('-')
+        const startDate = new Date(parseInt(year), parseInt(month) - 1, 1).toISOString()
+        const endDate = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59, 999).toISOString()
 
-        // 1. Traemos las órdenes (¡Agregamos "en_transito" a la lista!)
+        // 1. Traemos las órdenes del mes completo
         const { data: pickups, error: err1 } = await supabase
           .from("orders")
           .select("*")
           .eq("delivery_person_id", user.id)
           .in("status", ["pendiente", "recogido", "en_transito", "en_deposito"])
-          .gte("created_at", startOfDay)
-          .lte("created_at", endOfDay)
+          .gte("created_at", startDate)
+          .lte("created_at", endDate)
           .order("created_at", { ascending: true })
 
         const { data: deliveries, error: err2 } = await supabase
@@ -55,8 +61,8 @@ export default function DomiciliarioPage() {
           .select("*")
           .eq("delivery_person_id", user.id)
           .in("status", ["listo", "en_ruta_entrega", "entregado"])
-          .gte("created_at", startOfDay)
-          .lte("created_at", endOfDay)
+          .gte("created_at", startDate)
+          .lte("created_at", endDate)
           .order("created_at", { ascending: true })
 
         if (err1) console.error("Error recogidas:", err1)
@@ -107,7 +113,7 @@ export default function DomiciliarioPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase, filterDate]) // Se recarga cuando cambia la fecha
+  }, [supabase, filterMonth]) // Se recarga cuando cambia el mes
 
   const pickupCount = pickupOrders.length
   const deliveryCount = deliveryOrders.length
@@ -148,14 +154,14 @@ export default function DomiciliarioPage() {
             </div>
           </div>
           
-          {/* Filtro de Fecha Nativo */}
-          <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-md border">
+          {/* Filtro de Mes Nativo */}
+          <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-md border w-max">
             <CalendarIcon className="h-4 w-4 text-muted-foreground ml-2 shrink-0" />
             <Input 
-              type="date" 
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-              className="h-8 border-0 bg-transparent focus-visible:ring-0 shadow-none text-sm"
+              type="month" 
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+              className="h-8 border-0 bg-transparent focus-visible:ring-0 shadow-none text-sm w-[150px]"
             />
           </div>
         </div>
@@ -183,11 +189,11 @@ export default function DomiciliarioPage() {
               {pickupOrders.length === 0 ? (
                 <div className="text-center py-12">
                   <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                  <h3 className="font-medium text-lg">No hay recogidas para esta fecha</h3>
+                  <h3 className="font-medium text-lg">No hay recogidas para este mes</h3>
                 </div>
               ) : (
                 pickupOrders.map((order) => (
-                  <TaskCard key={order.id} order={order} type="pickup" />
+                  <TaskCard key={order.id} order={order} type="pickup" onUpdate={() => window.location.reload()} />
                 ))
               )}
             </div>
@@ -204,11 +210,11 @@ export default function DomiciliarioPage() {
               {deliveryOrders.length === 0 ? (
                 <div className="text-center py-12">
                   <Bike className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                  <h3 className="font-medium text-lg">No hay entregas para esta fecha</h3>
+                  <h3 className="font-medium text-lg">No hay entregas para este mes</h3>
                 </div>
               ) : (
                 deliveryOrders.map((order) => (
-                  <TaskCard key={order.id} order={order} type="delivery" />
+                  <TaskCard key={order.id} order={order} type="delivery" onUpdate={() => window.location.reload()} />
                 ))
               )}
             </div>
