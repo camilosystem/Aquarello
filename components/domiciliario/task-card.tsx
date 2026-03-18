@@ -5,7 +5,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { 
   MapPin, Phone, QrCode, Navigation, CheckCircle2, Scale, 
-  Loader2, ChevronDown, ChevronUp, User, Truck, Store 
+  Loader2, ChevronDown, ChevronUp, User, Truck, Store, RotateCcw
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -48,17 +48,14 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
     }
   }
 
-  // Confirmar la recogida inicial y guardar el peso
   const handlePickup = async () => {
     if (!weight || parseFloat(weight) <= 0) {
       toast.error('Ingresa el peso de la bolsa')
       return
     }
-
     setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      
       const { error: orderError } = await supabase
         .from('orders')
         .update({
@@ -77,29 +74,22 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
         notes: `Recogido por domiciliario. Peso: ${weight} kg`,
         changed_by: user?.id,
       })
-
       toast.success('Recogida completada')
       onUpdate?.()
     } catch (error: any) {
-      console.error('Error:', error)
       toast.error(`Error: ${error.message || 'Error al procesar la recogida'}`)
     } finally {
       setLoading(false)
     }
   }
 
-  // Función general para actualizar estados rápidos (Tránsito, Depósito, Entregado)
   const handleUpdateStatus = async (newStatus: OrderStatus, successMessage: string, historyNote: string) => {
     setLoading(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      
       const { error: orderError } = await supabase
         .from('orders')
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        })
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
         .eq('id', order.id)
 
       if (orderError) throw orderError
@@ -110,11 +100,9 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
         notes: historyNote,
         changed_by: user?.id,
       })
-
       toast.success(successMessage)
       onUpdate?.()
     } catch (error: any) {
-      console.error('Error:', error)
       toast.error('Error al actualizar el estado')
     } finally {
       setLoading(false)
@@ -169,7 +157,6 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                 <Phone className="h-4 w-4" />
               </Button>
             )}
-            
             <Button size="sm" variant="secondary" onClick={() => router.push(`/domiciliario/escanear?orderId=${order.id}`)}>
               <QrCode className="h-4 w-4" />
             </Button>
@@ -192,10 +179,8 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                 )}
               </div>
 
-              {/* ACCIONES DE RECOGIDA */}
               {isPickup && (
                 <div className="space-y-3">
-                  {/* Fase 1: Recoger */}
                   {order.status === 'pendiente' && (
                     <>
                       <div className="space-y-2">
@@ -220,37 +205,66 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                     </>
                   )}
 
-                  {/* Fase 2: En tránsito y En Depósito (Solo aparecen si ya se recogió) */}
-                  {(order.status === 'recogido' || order.status === 'en_transito') && (
+                  {(order.status === 'recogido' || order.status === 'en_transito' || order.status === 'en_deposito') && (
                     <div className="flex flex-col gap-2 pt-2 border-t border-dashed">
                       <p className="text-xs text-muted-foreground mb-1 text-center">Fase de traslado a lavandería</p>
                       
+                      {/* Si está "Recogido", puede pasarlo a "En Tránsito" o directo a "En Depósito" */}
                       {order.status === 'recogido' && (
-                        <Button 
-                          variant="outline" 
-                          className="w-full bg-orange-50 hover:bg-orange-100 hover:text-orange-700 text-orange-600 border-orange-200"
-                          onClick={() => handleUpdateStatus('en_transito' as OrderStatus, 'Orden marcada en tránsito', 'Domiciliario en camino hacia la lavandería')}
-                          disabled={loading}
-                        >
-                          <Truck className="mr-2 h-4 w-4" />
-                          Marcar "En Tránsito"
-                        </Button>
+                        <>
+                          <Button 
+                            variant="outline" 
+                            className="w-full bg-orange-50 hover:bg-orange-100 hover:text-orange-700 text-orange-600 border-orange-200"
+                            onClick={() => handleUpdateStatus('en_transito' as OrderStatus, 'Orden marcada en tránsito', 'Domiciliario en camino hacia la lavandería')}
+                            disabled={loading}
+                          >
+                            <Truck className="mr-2 h-4 w-4" /> Marcar "En Tránsito"
+                          </Button>
+                          <Button 
+                            className="w-full bg-indigo-600 hover:bg-indigo-700"
+                            onClick={() => handleUpdateStatus('en_deposito' as OrderStatus, 'Ropa entregada en depósito', 'Ropa entregada en las instalaciones de la lavandería')}
+                            disabled={loading}
+                          >
+                            <Store className="mr-2 h-4 w-4" /> Entregar en Lavandería (En Depósito)
+                          </Button>
+                        </>
                       )}
 
-                      <Button 
-                        className="w-full bg-indigo-600 hover:bg-indigo-700"
-                        onClick={() => handleUpdateStatus('en_deposito' as OrderStatus, 'Ropa entregada en depósito', 'Ropa entregada en las instalaciones de la lavandería')}
-                        disabled={loading}
-                      >
-                        <Store className="mr-2 h-4 w-4" />
-                        Entregar en Lavandería (En Depósito)
-                      </Button>
+                      {/* Si está "En Tránsito", puede Deshacerlo o pasarlo a "En Depósito" */}
+                      {order.status === 'en_transito' && (
+                        <>
+                          <Button 
+                            className="w-full bg-indigo-600 hover:bg-indigo-700"
+                            onClick={() => handleUpdateStatus('en_deposito' as OrderStatus, 'Ropa entregada en depósito', 'Ropa entregada en las instalaciones de la lavandería')}
+                            disabled={loading}
+                          >
+                            <Store className="mr-2 h-4 w-4" /> Entregar en Lavandería (En Depósito)
+                          </Button>
+                          <Button 
+                            variant="ghost" size="sm" className="text-muted-foreground"
+                            onClick={() => handleUpdateStatus('recogido' as OrderStatus, 'Estado revertido a recogido', 'El domiciliario deshizo el estado "En Tránsito"')}
+                            disabled={loading}
+                          >
+                            <RotateCcw className="mr-2 h-4 w-4" /> Deshacer "En Tránsito"
+                          </Button>
+                        </>
+                      )}
+
+                      {/* Si está "En Depósito", puede Deshacerlo y regresar a "En Tránsito" */}
+                      {order.status === 'en_deposito' && (
+                        <Button 
+                          variant="ghost" size="sm" className="text-muted-foreground"
+                          onClick={() => handleUpdateStatus('en_transito' as OrderStatus, 'Estado revertido a en tránsito', 'El domiciliario deshizo la entrega en depósito')}
+                          disabled={loading}
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" /> Deshacer "Entrega en Lavandería"
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
               )}
 
-              {/* ACCIONES DE ENTREGA */}
               {!isPickup && order.status === 'en_ruta_entrega' && (
                 <Button className="w-full bg-green-600 hover:bg-green-700" 
                   onClick={() => handleUpdateStatus('entregado' as OrderStatus, 'Entrega completada', 'Entregado al cliente por domiciliario')} 
