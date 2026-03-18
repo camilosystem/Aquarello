@@ -5,9 +5,17 @@ import { createClient } from "@/lib/supabase/client"
 import { DomiciliarioHeader } from "@/components/domiciliario/header"
 import dynamic from "next/dynamic"
 
+// Importación dinámica del mapa para evitar errores de SSR
 const DeliveryMap = dynamic(
-  () => import("@/components/domiciliario/delivery-map").then((mod) => mod.DeliveryMap || mod.default),
-  { ssr: false }
+  () => import("@/components/domiciliario/delivery-map").then((mod) => mod.DeliveryMap),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="h-[400px] m-4 rounded-xl flex items-center justify-center bg-muted animate-pulse border">
+        <p className="text-muted-foreground text-sm">Preparando contenedor del mapa...</p>
+      </div>
+    )
+  }
 )
 import { TaskCard } from "@/components/domiciliario/task-card"
 import { BottomNavDelivery } from "@/components/domiciliario/bottom-nav"
@@ -25,6 +33,9 @@ export default function DomiciliarioPage() {
   const [view, setView] = useState<"map" | "list">("list")
   const [activeTab, setActiveTab] = useState<"pickup" | "delivery">("pickup")
   
+  // Coordenadas simuladas para pruebas (Bogotá)
+  const [currentLocation, setCurrentLocation] = useState({ lat: 4.7110, lng: -74.0721 })
+
   // Estado para el filtro de mes (Por defecto: Mes actual YYYY-MM)
   const [filterMonth, setFilterMonth] = useState(() => {
     const today = new Date()
@@ -36,12 +47,26 @@ export default function DomiciliarioPage() {
   const supabase = createClient()
 
   useEffect(() => {
+    // Intentar obtener la ubicación real del GPS si el navegador lo permite
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          })
+        },
+        (error) => console.warn("Error obteniendo GPS:", error),
+        { enableHighAccuracy: true }
+      )
+    }
+
     async function loadData() {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
 
       if (user) {
-        // 1. Traemos TODAS las órdenes del domiciliario de un solo golpe (ordenadas por la más reciente)
+        // 1. Traemos TODAS las órdenes del domiciliario de un solo golpe
         const { data: allOrders, error } = await supabase
           .from("orders")
           .select("*")
@@ -53,13 +78,13 @@ export default function DomiciliarioPage() {
         // 2. Extraemos el mes y año que el usuario quiere filtrar
         const [year, month] = filterMonth.split('-')
         
-        // Estados en los que el domiciliario tiene que actuar AHORA
+        // Estados en los que el domiciliario tiene que actuar AHORA (Siempre visibles)
         const activeStatuses = ["pendiente", "recogido", "en_transito", "en_deposito", "listo", "en_ruta_entrega"]
         
         // Estados que pertenecen a la fase de entrega final
         const deliveryPhaseStatuses = ["listo", "en_ruta_entrega", "entregado", "completado"]
 
-        // 3. Filtramos la lista principal
+        // 3. Filtramos la lista principal inteligentemente
         const filteredOrders = (allOrders || []).filter(order => {
           const orderDate = new Date(order.created_at)
           const orderMonth = String(orderDate.getMonth() + 1).padStart(2, '0')
@@ -71,10 +96,7 @@ export default function DomiciliarioPage() {
         })
 
         // 4. Separamos en las dos pestañas sin dejar ninguna por fuera
-        // Todo lo que no sea de la fase de entrega, va para Recogidas (incluyendo historial como "en bodega")
         const pickups = filteredOrders.filter(o => !deliveryPhaseStatuses.includes(o.status))
-        
-        // Lo que sí es de entrega o ya se entregó, va para Entregas
         const deliveries = filteredOrders.filter(o => deliveryPhaseStatuses.includes(o.status))
 
         // 5. Inyectamos los datos del cliente
@@ -130,7 +152,10 @@ export default function DomiciliarioPage() {
   if (loading && pickupOrders.length === 0 && deliveryOrders.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Cargando panel...</p>
+        </div>
       </div>
     )
   }
@@ -187,8 +212,12 @@ export default function DomiciliarioPage() {
 
           <TabsContent value="pickup" className="flex-1 mt-0">
             {view === "map" ? (
-              <div className="h-[400px] m-4 rounded-xl overflow-hidden border">
-                <DeliveryMap orders={pickupOrders} currentLocation={{ lat: 4.6097, lng: -74.0817 }} />
+              // Contenedor del mapa forzando altura explícita
+              <div className="h-[400px] m-4 rounded-xl overflow-hidden border shadow-inner bg-muted">
+                <DeliveryMap 
+                    orders={pickupOrders} 
+                    currentLocation={currentLocation} 
+                />
               </div>
             ) : null}
             
@@ -208,8 +237,12 @@ export default function DomiciliarioPage() {
 
           <TabsContent value="delivery" className="flex-1 mt-0">
             {view === "map" ? (
-              <div className="h-[400px] m-4 rounded-xl overflow-hidden border">
-                <DeliveryMap orders={deliveryOrders} currentLocation={{ lat: 4.6097, lng: -74.0817 }} />
+              // Contenedor del mapa forzando altura explícita
+              <div className="h-[400px] m-4 rounded-xl overflow-hidden border shadow-inner bg-muted">
+                <DeliveryMap 
+                    orders={deliveryOrders} 
+                    currentLocation={currentLocation} 
+                />
               </div>
             ) : null}
             

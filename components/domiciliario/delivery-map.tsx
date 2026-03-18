@@ -1,30 +1,23 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api'
 import { Navigation } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { Order } from '@/lib/types'
-
-const containerStyle = {
-  width: '100%',
-  height: '100%',
-  borderRadius: '0.5rem'
-}
 
 // Default center: Bogotá, Colombia
 const defaultCenter = { lat: 4.7110, lng: -74.0721 }
 
 interface DeliveryMapProps {
-  orders: any[] // Usamos any para evitar conflictos con la versión inyectada de profiles
+  orders: any[]
   currentLocation?: { lat: number; lng: number } | null
   onOrderClick?: (order: any) => void
   className?: string
 }
 
 export function DeliveryMap({ orders, currentLocation, onOrderClick, className }: DeliveryMapProps) {
-  // Carga de la API de Google Maps
+  // Carga de la API de Google Maps con la clave de entorno
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '', 
@@ -33,7 +26,17 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
 
-  const center = currentLocation ? { lat: currentLocation.lat, lng: currentLocation.lng } : defaultCenter
+  // Usamos useMemo para que el centro no se recalcule innecesariamente
+  const center = useMemo(() => {
+    return currentLocation ? { lat: currentLocation.lat, lng: currentLocation.lng } : defaultCenter
+  }, [currentLocation])
+
+  // Estilo del contenedor forzando altura
+  const mapContainerStyle = useMemo(() => ({
+    width: '100%',
+    height: '100%', // Esto es crucial
+    borderRadius: '0.5rem'
+  }), [])
 
   // Ajustar cámara automáticamente para ver todos los puntos
   const onLoad = useCallback(function callback(map: google.maps.Map) {
@@ -58,14 +61,14 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
 
     if (hasMarkers) {
       map.fitBounds(bounds)
-      // Evitar que el zoom se acerque demasiado si solo hay 1 punto
+      // Evitar zoom excesivo
       const listener = google.maps.event.addListener(map, "idle", function() { 
-        if (map.getZoom()! > 15) map.setZoom(15); 
+        if (map.getZoom()! > 16) map.setZoom(16); 
         google.maps.event.removeListener(listener); 
       });
     } else {
       map.setCenter(center)
-      map.setZoom(13)
+      map.setZoom(14)
     }
 
     setMap(map)
@@ -75,67 +78,72 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
     setMap(null)
   }, [])
 
-  // Botón para centrar en el domiciliario
   const centerOnLocation = () => {
     if (map && currentLocation) {
       map.panTo(currentLocation)
-      map.setZoom(15)
+      map.setZoom(16)
     }
   }
 
-  // Manejo de Errores de API Key
+  // Separar órdenes válidas
+  const pickupOrders = useMemo(() => orders.filter(o => {
+    const isPickup = ['pendiente', 'recogido', 'en_transito', 'en_deposito'].includes(o.status)
+    return isPickup && o.pickup_lat && o.pickup_lng
+  }), [orders])
+  
+  const deliveryOrders = useMemo(() => orders.filter(o => {
+    const isDelivery = ['listo', 'en_ruta_entrega'].includes(o.status)
+    return isDelivery && o.delivery_lat && o.delivery_lng
+  }), [orders])
+
+  // -- MANEJO DE ESTADOS DE CARGA --
+
   if (loadError) {
     return (
-      <div className={cn("flex flex-col items-center justify-center bg-destructive/10 text-destructive text-sm text-center p-4 h-full w-full rounded-lg", className)}>
-        <p className="font-bold">Error al cargar Google Maps</p>
-        <p className="text-xs mt-1">Verifica tu NEXT_PUBLIC_GOOGLE_MAPS_API_KEY en Vercel.</p>
+      <div className={cn("flex flex-col items-center justify-center bg-destructive/10 text-destructive text-sm text-center p-4 h-full w-full rounded-lg border border-destructive/20", className)} style={{ minHeight: '300px' }}>
+        <p className="font-bold">Error crítico de Google Maps</p>
+        <p className="text-xs mt-1">Verifica la consola del navegador y tu API Key.</p>
       </div>
     )
   }
 
   if (!isLoaded) {
     return (
-      <div className={cn("flex items-center justify-center bg-muted h-full w-full rounded-lg", className)}>
-        <div className="animate-pulse text-muted-foreground font-medium">Cargando mapa de Google...</div>
+      <div className={cn("flex items-center justify-center bg-muted h-full w-full rounded-lg border", className)} style={{ minHeight: '300px' }}>
+        <div className="flex flex-col items-center gap-2">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+            <p className="text-muted-foreground font-medium text-sm">Cargando Google Maps...</p>
+        </div>
       </div>
     )
   }
 
-  // Separar órdenes que sí tienen coordenadas reales
-  const pickupOrders = orders.filter(o => {
-    const isPickup = ['pendiente', 'recogido', 'en_transito', 'en_deposito'].includes(o.status)
-    return isPickup && o.pickup_lat && o.pickup_lng
-  })
-  
-  const deliveryOrders = orders.filter(o => {
-    const isDelivery = ['listo', 'en_ruta_entrega'].includes(o.status)
-    return isDelivery && o.delivery_lat && o.delivery_lng
-  })
+  // -- RENDERIZADO DEL MAPA CUANDO ESTÁ LISTO --
 
   return (
-    <div className={cn("relative h-full w-full", className)}>
+    <div className={cn("relative h-full w-full", className)} style={{ minHeight: '300px' }}>
       <GoogleMap
-        mapContainerStyle={containerStyle}
+        mapContainerStyle={mapContainerStyle}
         center={center}
-        zoom={13}
+        zoom={14}
         onLoad={onLoad}
         onUnmount={onUnmount}
         options={{
-          disableDefaultUI: true, // Apaga los controles feos por defecto
+          disableDefaultUI: true,
           zoomControl: true,
           mapTypeControl: false,
           streetViewControl: false,
-          fullscreenControl: true,
+          fullscreenControl: false,
         }}
       >
-        {/* Marcador del Domiciliario (Punto Azul Nativo) */}
+        {/* Marcador del Domiciliario */}
         {currentLocation && (
           <Marker
             position={currentLocation}
             icon={{
               path: google.maps.SymbolPath.CIRCLE,
               scale: 8,
-              fillColor: "#3b82f6", // Azul
+              fillColor: "#3b82f6",
               fillOpacity: 1,
               strokeWeight: 2,
               strokeColor: "#ffffff",
@@ -144,14 +152,14 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
           />
         )}
 
-        {/* Marcadores de Recogida (Pines Azules) */}
+        {/* Marcadores de Recogida */}
         {pickupOrders.map((order) => {
           const position = { lat: Number(order.pickup_lat), lng: Number(order.pickup_lng) }
           return (
             <Marker
               key={`pickup-${order.id}`}
               position={position}
-              icon={{ url: 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png' }}
+              icon={{ url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' }}
               onClick={() => {
                 setSelectedOrder({ ...order, position, type: 'pickup' })
                 onOrderClick?.(order)
@@ -160,14 +168,14 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
           )
         })}
 
-        {/* Marcadores de Entrega (Pines Verdes) */}
+        {/* Marcadores de Entrega */}
         {deliveryOrders.map((order) => {
           const position = { lat: Number(order.delivery_lat), lng: Number(order.delivery_lng) }
           return (
             <Marker
               key={`delivery-${order.id}`}
               position={position}
-              icon={{ url: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png' }}
+              icon={{ url: 'https://maps.google.com/mapfiles/ms/icons/green-dot.png' }}
               onClick={() => {
                 setSelectedOrder({ ...order, position, type: 'delivery' })
                 onOrderClick?.(order)
@@ -176,27 +184,25 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
           )
         })}
 
-        {/* Ventana de información interactiva */}
+        {/* Ventana de información */}
         {selectedOrder && (
           <InfoWindow
             position={selectedOrder.position}
             onCloseClick={() => setSelectedOrder(null)}
           >
-            <div className="p-1 max-w-[200px]">
+            <div className="p-1 max-w-[200px] text-foreground">
               <div className={cn(
                 "font-bold text-sm mb-1", 
                 selectedOrder.type === 'pickup' ? "text-blue-600" : "text-green-600"
               )}>
                 {selectedOrder.type === 'pickup' ? 'Recogida' : 'Entrega'}
               </div>
-              <div className="font-medium text-foreground mb-1">
+              <div className="font-medium mb-1">
                 {selectedOrder.cliente?.full_name || 'Cliente'}
               </div>
-              <div className="text-xs text-muted-foreground mb-2">
+              <div className="text-xs text-muted-foreground mb-2 line-clamp-2">
                 {selectedOrder.type === 'pickup' ? selectedOrder.pickup_address : selectedOrder.delivery_address}
               </div>
-              
-              {/* Botón nativo para abrir la app de Waze/Google Maps */}
               <a 
                 href={`https://www.google.com/maps/dir/?api=1&destination=${selectedOrder.position.lat},${selectedOrder.position.lng}`}
                 target="_blank"
@@ -210,7 +216,7 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
         )}
       </GoogleMap>
 
-      {/* Botón flotante para centrar la cámara */}
+      {/* Botón flotante para centrar */}
       {currentLocation && (
         <Button
           size="icon"
@@ -222,7 +228,7 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
       )}
 
       {/* Leyenda superior */}
-      <div className="absolute top-4 left-4 z-[10] bg-card/90 backdrop-blur rounded-lg p-3 shadow-lg border">
+      <div className="absolute top-4 left-4 z-[10] bg-card/95 backdrop-blur rounded-lg p-3 shadow-lg border">
         <div className="space-y-2 text-xs font-medium">
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-blue-500" />
