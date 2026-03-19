@@ -8,55 +8,57 @@ import {
   WashingMachine, 
   Wind, 
   Shirt,
-  Package,
   MapPin,
   CheckCircle2,
   XCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { OrderStatus } from '@/lib/types'
 
+// Usamos string en lugar de un tipo estricto para evitar errores si types.ts no está actualizado
 interface TimelineStep {
-  status: OrderStatus
+  status: string
   label: string
   icon: React.ElementType
 }
 
+// NUEVO ORDEN LÓGICO DE NUESTRA CADENA DE CUSTODIA
 const TIMELINE_STEPS: TimelineStep[] = [
   { status: 'pendiente', label: 'Pendiente', icon: Clock },
   { status: 'recogido', label: 'Recogido', icon: Bike },
-  { status: 'en_deposito', label: 'En depósito', icon: Building2 },
-  { status: 'en_transito_lavado', label: 'En tránsito', icon: Truck },
+  { status: 'en_transito', label: 'En tránsito', icon: Truck },
+  { status: 'en_deposito', label: 'En lavandería', icon: Building2 }, // Handshake exitoso
   { status: 'en_lavado', label: 'En lavado', icon: WashingMachine },
   { status: 'en_secado', label: 'En secado', icon: Wind },
   { status: 'en_alistamiento', label: 'Alistamiento', icon: Shirt },
-  { status: 'listo', label: 'Listo', icon: Package },
   { status: 'en_ruta_entrega', label: 'En ruta', icon: MapPin },
   { status: 'entregado', label: 'Entregado', icon: CheckCircle2 },
 ]
 
-const STATUS_ORDER: Record<OrderStatus, number> = {
+// DICCIONARIO PARA SABER EN QUÉ NÚMERO DE PASO VAMOS (Incluye fallbacks por seguridad)
+const STATUS_ORDER: Record<string, number> = {
   pendiente: 0,
   recogido: 1,
-  en_deposito: 2,
-  en_transito_lavado: 3,
+  en_transito: 2,
+  en_transito_lavado: 2, // Por si queda algún pedido viejo
+  en_deposito: 3,
   en_lavado: 4,
   en_secado: 5,
   en_alistamiento: 6,
-  listo: 7,
-  en_transito_entrega: 8,
-  en_ruta_entrega: 8,
-  entregado: 9,
+  listo: 6, // Fallback
+  en_ruta_entrega: 7,
+  entregado: 8,
+  completado: 8, // Fallback
   cancelado: -1,
 }
 
 interface OrderStatusTimelineProps {
-  currentStatus: OrderStatus
+  currentStatus: string
   compact?: boolean
 }
 
 export function OrderStatusTimeline({ currentStatus, compact = false }: OrderStatusTimelineProps) {
-  const currentIndex = STATUS_ORDER[currentStatus]
+  // Obtenemos el índice actual. Si por alguna razón llega un estado raro, no rompemos la app (fallback a 0)
+  const currentIndex = STATUS_ORDER[currentStatus] ?? 0
   const isCancelled = currentStatus === 'cancelado'
 
   if (isCancelled) {
@@ -151,7 +153,7 @@ export function OrderStatusTimeline({ currentStatus, compact = false }: OrderSta
                 {step.label}
               </p>
               {isCurrent && (
-                <p className="mt-1 text-sm text-muted-foreground">
+                <p className="mt-1 text-sm text-muted-foreground animate-in fade-in slide-in-from-top-1">
                   {getStatusDescription(step.status)}
                 </p>
               )}
@@ -163,20 +165,17 @@ export function OrderStatusTimeline({ currentStatus, compact = false }: OrderSta
   )
 }
 
-function getStatusDescription(status: OrderStatus): string {
-  const descriptions: Record<OrderStatus, string> = {
+function getStatusDescription(status: string): string {
+  const descriptions: Record<string, string> = {
     pendiente: 'Esperando que un domiciliario recoja tu ropa',
     recogido: 'El domiciliario tiene tu bolsa de ropa',
-    en_deposito: 'Tu ropa está en el centro de depósito',
-    en_transito_lavado: 'El camión está llevando tu ropa al centro de lavado',
+    en_transito: 'El domiciliario va en camino hacia la lavandería',
+    en_deposito: 'Tu ropa está segura en nuestras instalaciones',
     en_lavado: 'Tu ropa está siendo lavada con cuidado',
     en_secado: 'Tu ropa está en la secadora',
     en_alistamiento: 'Doblando y preparando tu ropa',
-    listo: 'Tu ropa está lista para ser enviada',
-    en_transito_entrega: 'Tu ropa va camino al centro de depósito',
-    en_ruta_entrega: 'El domiciliario va en camino a tu dirección',
+    en_ruta_entrega: 'El domiciliario va en camino a entregarte tu ropa',
     entregado: '¡Tu ropa ha sido entregada!',
-    cancelado: 'El pedido fue cancelado',
   }
-  return descriptions[status]
+  return descriptions[status] || 'Procesando tu pedido...'
 }
