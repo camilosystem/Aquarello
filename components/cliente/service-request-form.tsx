@@ -169,6 +169,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
     setStep(2)
   }
 
+  // === AQUÍ ESTÁ EL CÓDIGO ACTUALIZADO ===
   const handleSubmit = async () => {
     if (!supabase) {
       toast.error('Error de conexión. Por favor recarga la página.')
@@ -181,11 +182,15 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
 
       const qrCode = generateQRCode()
       const estimatedPrice = estimatePrice()
+      
+      // GENERAMOS EL CÓDIGO DE 6 DÍGITOS PARA EL HANDSHAKE
+      const receptionCode = Math.floor(100000 + Math.random() * 900000).toString()
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           qr_code: qrCode,
+          reception_code: receptionCode, // GUARDAMOS EL CÓDIGO
           user_id: userId,
           status: 'pendiente',
           pickup_address: address,
@@ -481,7 +486,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
         )}
       </div>
 
-      {/* --- MODAL DEL MAPA BLINDADO --- */}
+      {/* --- MODAL DEL MAPA --- */}
       {showMapModal && isLoaded && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="bg-background w-full max-w-lg rounded-xl shadow-2xl overflow-hidden flex flex-col h-[70vh]">

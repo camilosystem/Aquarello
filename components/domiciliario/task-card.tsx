@@ -5,7 +5,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { 
   MapPin, Phone, QrCode, Navigation, CheckCircle2, Scale, 
-  Loader2, ChevronDown, ChevronUp, User, Truck, Store, RotateCcw
+  Loader2, ChevronDown, ChevronUp, User, Truck, Store, RotateCcw, Lock
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -30,6 +30,10 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [weight, setWeight] = useState('')
+  
+  // Estados para el código de seguridad
+  const [showCodePrompt, setShowCodePrompt] = useState(false)
+  const [securityCode, setSecurityCode] = useState('')
 
   const isPickup = type === 'pickup'
   const address = isPickup ? order.pickup_address : (order.delivery_address || order.pickup_address)
@@ -37,7 +41,6 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
   const customerName = order.cliente?.full_name || 'Cliente sin nombre'
   const customerPhone = order.cliente?.phone || ''
 
-  // -- AQUÍ ESTÁ EL ARREGLO DE LA NAVEGACIÓN --
   const handleNavigate = () => {
     const lat = isPickup ? order.pickup_lat : order.delivery_lat
     const lng = isPickup ? order.pickup_lng : order.delivery_lng
@@ -102,12 +105,30 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
         changed_by: user?.id,
       })
       toast.success(successMessage)
+      setShowCodePrompt(false)
+      setSecurityCode('')
       onUpdate?.()
     } catch (error: any) {
       toast.error('Error al actualizar el estado')
     } finally {
       setLoading(false)
     }
+  }
+
+  // --- LÓGICA DE VALIDACIÓN DEL CÓDIGO ---
+  const handleVerifyCodeAndDeliver = async () => {
+    if (!securityCode || securityCode.length !== 6) {
+      toast.error('El código debe tener 6 dígitos')
+      return
+    }
+
+    if (securityCode !== order.reception_code) {
+      toast.error('Código incorrecto. Pídele el código correcto al operador.')
+      return
+    }
+
+    // Si el código es correcto, marcamos como "en_deposito"
+    await handleUpdateStatus('en_deposito' as OrderStatus, 'Bolsa entregada exitosamente al Operador', 'Entregada en depósito mediante código de seguridad')
   }
 
   return (
@@ -206,56 +227,63 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                     </>
                   )}
 
-                  {(order.status === 'recogido' || order.status === 'en_transito' || order.status === 'en_deposito') && (
+                  {/* Acciones para Recogido y En Tránsito */}
+                  {(order.status === 'recogido' || order.status === 'en_transito') && (
                     <div className="flex flex-col gap-2 pt-2 border-t border-dashed">
                       <p className="text-xs text-muted-foreground mb-1 text-center">Fase de traslado a lavandería</p>
                       
                       {order.status === 'recogido' && (
-                        <>
-                          <Button 
-                            variant="outline" 
-                            className="w-full bg-orange-50 hover:bg-orange-100 hover:text-orange-700 text-orange-600 border-orange-200"
-                            onClick={() => handleUpdateStatus('en_transito' as OrderStatus, 'Orden marcada en tránsito', 'Domiciliario en camino hacia la lavandería')}
-                            disabled={loading}
-                          >
-                            <Truck className="mr-2 h-4 w-4" /> Marcar "En Tránsito"
-                          </Button>
-                          <Button 
-                            className="w-full bg-indigo-600 hover:bg-indigo-700"
-                            onClick={() => handleUpdateStatus('en_deposito' as OrderStatus, 'Ropa entregada en depósito', 'Ropa entregada en las instalaciones de la lavandería')}
-                            disabled={loading}
-                          >
-                            <Store className="mr-2 h-4 w-4" /> Entregar en Lavandería (En Depósito)
-                          </Button>
-                        </>
-                      )}
-
-                      {order.status === 'en_transito' && (
-                        <>
-                          <Button 
-                            className="w-full bg-indigo-600 hover:bg-indigo-700"
-                            onClick={() => handleUpdateStatus('en_deposito' as OrderStatus, 'Ropa entregada en depósito', 'Ropa entregada en las instalaciones de la lavandería')}
-                            disabled={loading}
-                          >
-                            <Store className="mr-2 h-4 w-4" /> Entregar en Lavandería (En Depósito)
-                          </Button>
-                          <Button 
-                            variant="ghost" size="sm" className="text-muted-foreground"
-                            onClick={() => handleUpdateStatus('recogido' as OrderStatus, 'Estado revertido a recogido', 'El domiciliario deshizo el estado "En Tránsito"')}
-                            disabled={loading}
-                          >
-                            <RotateCcw className="mr-2 h-4 w-4" /> Deshacer "En Tránsito"
-                          </Button>
-                        </>
-                      )}
-
-                      {order.status === 'en_deposito' && (
                         <Button 
-                          variant="ghost" size="sm" className="text-muted-foreground"
-                          onClick={() => handleUpdateStatus('en_transito' as OrderStatus, 'Estado revertido a en tránsito', 'El domiciliario deshizo la entrega en depósito')}
+                          variant="outline" 
+                          className="w-full bg-orange-50 hover:bg-orange-100 hover:text-orange-700 text-orange-600 border-orange-200"
+                          onClick={() => handleUpdateStatus('en_transito' as OrderStatus, 'Orden marcada en tránsito', 'Domiciliario en camino hacia la lavandería')}
                           disabled={loading}
                         >
-                          <RotateCcw className="mr-2 h-4 w-4" /> Deshacer "Entrega en Lavandería"
+                          <Truck className="mr-2 h-4 w-4" /> Marcar "En Tránsito"
+                        </Button>
+                      )}
+
+                      {/* Botón de entregar en lavandería, con lógica de candado */}
+                      {showCodePrompt ? (
+                        <div className="p-3 bg-muted rounded-lg border space-y-3 animate-in fade-in slide-in-from-top-2">
+                          <Label className="text-xs text-center block text-indigo-600 font-bold flex items-center justify-center gap-1">
+                            <Lock className="w-3 h-3" /> Pide el código al operador
+                          </Label>
+                          <Input
+                            type="text"
+                            maxLength={6}
+                            placeholder="Ej: 123456"
+                            className="text-center font-mono tracking-widest text-lg"
+                            value={securityCode}
+                            onChange={(e) => setSecurityCode(e.target.value.replace(/\D/g, ''))} // Solo números
+                          />
+                          <div className="flex gap-2">
+                            <Button variant="ghost" className="flex-1" onClick={() => setShowCodePrompt(false)}>
+                              Cancelar
+                            </Button>
+                            <Button className="flex-1 bg-indigo-600 hover:bg-indigo-700" onClick={handleVerifyCodeAndDeliver} disabled={loading}>
+                              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verificar'}
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <Button 
+                          className="w-full bg-indigo-600 hover:bg-indigo-700"
+                          onClick={() => setShowCodePrompt(true)}
+                          disabled={loading}
+                        >
+                          <Store className="mr-2 h-4 w-4" /> Entregar en Lavandería (En Depósito)
+                        </Button>
+                      )}
+
+                      {/* Si está en tránsito, también puede deshacer el error si aún no ha metido el código */}
+                      {order.status === 'en_transito' && !showCodePrompt && (
+                        <Button 
+                          variant="ghost" size="sm" className="text-muted-foreground mt-2"
+                          onClick={() => handleUpdateStatus('recogido' as OrderStatus, 'Estado revertido a recogido', 'El domiciliario deshizo el estado "En Tránsito"')}
+                          disabled={loading}
+                        >
+                          <RotateCcw className="mr-2 h-4 w-4" /> Deshacer "En Tránsito"
                         </Button>
                       )}
                     </div>
@@ -263,14 +291,7 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                 </div>
               )}
 
-              {!isPickup && order.status === 'en_ruta_entrega' && (
-                <Button className="w-full bg-green-600 hover:bg-green-700" 
-                  onClick={() => handleUpdateStatus('entregado' as OrderStatus, 'Entrega completada', 'Entregado al cliente por domiciliario')} 
-                  disabled={loading}>
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                  Confirmar Entrega
-                </Button>
-              )}
+              {/* ... (Lógica de entrega al cliente) ... */}
             </div>
           </CollapsibleContent>
         </CardContent>

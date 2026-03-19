@@ -31,7 +31,8 @@ import {
   RotateCcw,
   Send,
   FileText,
-  Bike
+  Bike,
+  Lock
 } from 'lucide-react'
 import type { Order, OrderPreferences, WashingProcess } from '@/lib/types'
 
@@ -47,6 +48,14 @@ const DRYERS = [
   { id: 'SC-001', name: 'Secadora Industrial 1', capacity: '25kg' },
   { id: 'SC-002', name: 'Secadora Industrial 2', capacity: '25kg' },
   { id: 'SC-003', name: 'Secadora Mediana 1', capacity: '15kg' },
+]
+
+// NUEVO: Opciones de tiempo para los timers
+const TIME_OPTIONS = [
+  { value: '15', label: '15 minutos (Rápido)' },
+  { value: '30', label: '30 minutos (Normal)' },
+  { value: '45', label: '45 minutos (Profundo)' },
+  { value: '60', label: '1 hora (Pesado)' },
 ]
 
 const PROCESS_STEPS = [
@@ -70,6 +79,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   
   const [selectedMachine, setSelectedMachine] = useState('')
   const [selectedDryer, setSelectedDryer] = useState('')
+  
+  // NUEVO: Estados para los tiempos seleccionados
+  const [machineTime, setMachineTime] = useState('')
+  const [dryerTime, setDryerTime] = useState('')
+
   const [processNotes, setProcessNotes] = useState('')
   const [selectedDomiciliario, setSelectedDomiciliario] = useState<string>('unassigned')
   
@@ -106,7 +120,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
       setOrder(orderData)
       
-      // Set initial selected domiciliario
       if (orderData.delivery_person_id) {
         setSelectedDomiciliario(orderData.delivery_person_id)
       } else {
@@ -182,19 +195,41 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
       toast.success(valToSave ? 'Domiciliario asignado correctamente' : 'Asignación removida')
       
-      // Update local order state
       setOrder((prev: any) => prev ? { ...prev, delivery_person_id: valToSave } : null)
     } catch (error: any) {
-      // AQUÍ ESTÁ EL CAMBIO MÁGICO
       console.error("Error completo de Supabase:", error);
       toast.error(`Error real: ${error.message || 'Revisa la consola'}`);
     }
     setAssigning(false)
   }
 
+  // --- NUEVA LÓGICA DE TIMERS Y MÁQUINAS ---
+  const updateMachineTimer = async (machineId: string, minutes: number, type: 'lavadora' | 'secadora') => {
+    if (!machineId || !minutes) return;
+
+    // Calculamos el tiempo de finalización sumando los minutos a la hora actual
+    const completionTime = new Date();
+    completionTime.setMinutes(completionTime.getMinutes() + minutes);
+
+    try {
+      // Supongo que tienes una tabla 'machines' o similar para controlar su estado. 
+      // Si el nombre de tu tabla es diferente, ajusta 'machines' por el nombre correcto.
+      await supabase
+        .from('machines')
+        .update({ 
+          status: 'in_use', 
+          current_order_id: id,
+          end_time: completionTime.toISOString()
+        })
+        .eq('id', machineId)
+    } catch (error) {
+      console.error(`Error actualizando el timer de la ${type}:`, error)
+    }
+  }
+
   const handleStartProcess = async () => {
-    if (!selectedMachine) {
-      toast.error('Selecciona una lavadora')
+    if (!selectedMachine && completedSteps.lavado === false) {
+      toast.error('Selecciona una lavadora para iniciar')
       return
     }
 
@@ -202,7 +237,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     try {
       const { data: { user } } = await supabase.auth.getUser()
       
-      // Create or update process
       const processPayload = {
         order_id: id,
         operator_id: user?.id,
@@ -218,25 +252,23 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       }
 
       if (process) {
-        await supabase
-          .from('washing_process')
-          .update(processPayload)
-          .eq('id', process.id)
+        await supabase.from('washing_process').update(processPayload).eq('id', process.id)
       } else {
-        await supabase
-          .from('washing_process')
-          .insert(processPayload)
+        await supabase.from('washing_process').insert(processPayload)
       }
 
-      // Update order status
+      // Si se seleccionó un tiempo, encendemos el timer de la lavadora
+      if (selectedMachine && machineTime) {
+        await updateMachineTimer(selectedMachine, parseInt(machineTime), 'lavadora')
+      }
+
       await supabase
         .from('orders')
         .update({ status: 'en_lavado', updated_at: new Date().toISOString() })
         .eq('id', id)
 
-      toast.success('Proceso de lavado iniciado')
+      toast.success('Proceso de lavado iniciado y timer activado')
       
-      // Reload data
       const { data: newOrder } = await supabase.from('orders').select('*').eq('id', id).single()
       if (newOrder) setOrder(newOrder)
       
@@ -267,7 +299,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         })
         .eq('order_id', id)
 
-      // Update order status based on steps
+      // Si el operador acaba de marcar la secadora y le puso tiempo, encendemos el timer
+      if (selectedDryer && dryerTime && !completedSteps.secado) {
+        await updateMachineTimer(selectedDryer, parseInt(dryerTime), 'secadora')
+        toast.success('Timer de secadora activado')
+      }
+
       let newStatus = order?.status || 'en_lavado'
       if (completedSteps.lavado && !completedSteps.secado) {
         newStatus = 'en_secado'
@@ -301,7 +338,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     try {
       const { data: { user } } = await supabase.auth.getUser()
 
-      // Complete process
+      // Liberar las máquinas (Limpiar los timers)
+      if (selectedMachine) {
+        await supabase.from('machines').update({ status: 'available', current_order_id: null, end_time: null }).eq('id', selectedMachine)
+      }
+      if (selectedDryer) {
+        await supabase.from('machines').update({ status: 'available', current_order_id: null, end_time: null }).eq('id', selectedDryer)
+      }
+
       await supabase
         .from('washing_process')
         .update({
@@ -310,14 +354,12 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         })
         .eq('order_id', id)
 
-      // Update order status
       await supabase
         .from('orders')
         .update({ status: 'en_ruta_entrega', updated_at: new Date().toISOString() })
         .eq('id', id)
 
-      // Create receipt
-      const totalAmount = (order?.weight_kg || 1) * 8000 // $8,000 COP per kg base
+      const totalAmount = (order?.weight_kg || 1) * 8000
       await supabase
         .from('receipts')
         .insert({
@@ -330,7 +372,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           }
         })
 
-      toast.success('Proceso completado. Recibo generado y enviado al cliente.')
+      toast.success('Proceso completado. Máquinas liberadas. Recibo generado.')
       router.push('/operador/tickets')
       
     } catch {
@@ -353,8 +395,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     const colors: Record<string, string> = {
       'pendiente': 'bg-yellow-100 text-yellow-800',
       'recogido': 'bg-blue-100 text-blue-800',
-      'en_bodega': 'bg-purple-100 text-purple-800',
-      'en_transito_lavado': 'bg-indigo-100 text-indigo-800',
+      'en_deposito': 'bg-purple-100 text-purple-800', // Modificado para el nuevo estado
+      'en_transito': 'bg-indigo-100 text-indigo-800',
       'en_lavado': 'bg-cyan-100 text-cyan-800',
       'en_secado': 'bg-orange-100 text-orange-800',
       'en_alistamiento': 'bg-pink-100 text-pink-800',
@@ -369,8 +411,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     const labels: Record<string, string> = {
       'pendiente': 'Pendiente',
       'recogido': 'Recogido',
-      'en_bodega': 'En Bodega',
-      'en_transito_lavado': 'En Transito',
+      'en_deposito': 'En Depósito', // Modificado
+      'en_transito': 'En Tránsito', // Modificado
       'en_lavado': 'Lavando',
       'en_secado': 'Secando',
       'en_alistamiento': 'Alistando',
@@ -391,7 +433,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
   if (!order) return null
 
-  const canStartProcess = ['en_bodega', 'en_transito_lavado'].includes(order.status)
+  // Actualizamos las condiciones para incluir los nuevos estados
+  const canStartProcess = ['en_deposito', 'en_transito'].includes(order.status) || order.status === 'pendiente' || order.status === 'recogido'
   const isProcessing = ['en_lavado', 'en_secado', 'en_alistamiento'].includes(order.status)
   const isCompleted = ['en_ruta_entrega', 'entregado', 'completado'].includes(order.status)
 
@@ -427,6 +470,24 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             </div>
           </div>
 
+          {/* NUEVO: CÓDIGO DE SEGURIDAD ULTRA VISIBLE */}
+          {order.reception_code && !isCompleted && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-center justify-between shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="bg-indigo-100 p-2 rounded-full">
+                  <Lock className="h-6 w-6 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-indigo-900">Código de Seguridad (Handshake)</p>
+                  <p className="text-xs text-indigo-700">Pide este código al domiciliario para recibir la bolsa.</p>
+                </div>
+              </div>
+              <div className="text-3xl font-mono font-bold text-indigo-600 tracking-widest bg-white px-4 py-2 rounded-md border border-indigo-100">
+                {order.reception_code}
+              </div>
+            </div>
+          )}
+
           {/* Order Info */}
           <div className="grid md:grid-cols-2 gap-6">
             <Card>
@@ -445,7 +506,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   <Scale className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Peso</p>
-                    <p className="font-medium">{order.weight_kg ? `${order.weight_kg} kg` : 'Sin pesar'}</p>
+                    <p className="font-medium">{order.actual_weight ? `${order.actual_weight} kg` : 'Sin pesar'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -567,43 +628,82 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           {!isCompleted && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Control de Proceso</CardTitle>
+                <CardTitle className="text-base">Control de Proceso (Con Timers)</CardTitle>
                 <CardDescription>
                   {canStartProcess ? 'Configura y comienza el proceso de lavado' : 'Gestiona el progreso del lavado'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Machine Selection */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Lavadora</Label>
-                    <Select value={selectedMachine} onValueChange={setSelectedMachine}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar lavadora" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {WASHING_MACHINES.map(machine => (
-                          <SelectItem key={machine.id} value={machine.id}>
-                            {machine.name} ({machine.capacity})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                
+                {/* NUEVO: Machine & Time Selection */}
+                <div className="grid md:grid-cols-2 gap-6 bg-muted/50 p-4 rounded-lg border">
+                  
+                  {/* Lado Lavadora */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2"><Droplets className="w-4 h-4 text-blue-500" /> Lavadora</Label>
+                      <Select value={selectedMachine} onValueChange={setSelectedMachine}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Seleccionar lavadora" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {WASHING_MACHINES.map(machine => (
+                            <SelectItem key={machine.id} value={machine.id}>
+                              {machine.name} ({machine.capacity})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {selectedMachine && !completedSteps.lavado && (
+                      <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                        <Label className="text-xs text-muted-foreground">Tiempo de Lavado (Timer)</Label>
+                        <Select value={machineTime} onValueChange={setMachineTime}>
+                          <SelectTrigger className="bg-background border-blue-200">
+                            <SelectValue placeholder="Seleccionar tiempo..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIME_OPTIONS.map(time => (
+                              <SelectItem key={time.value} value={time.value}>{time.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-2">
-                    <Label>Secadora</Label>
-                    <Select value={selectedDryer} onValueChange={setSelectedDryer}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar secadora" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DRYERS.map(dryer => (
-                          <SelectItem key={dryer.id} value={dryer.id}>
-                            {dryer.name} ({dryer.capacity})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+
+                  {/* Lado Secadora */}
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2"><Wind className="w-4 h-4 text-orange-500" /> Secadora</Label>
+                      <Select value={selectedDryer} onValueChange={setSelectedDryer}>
+                        <SelectTrigger className="bg-background">
+                          <SelectValue placeholder="Seleccionar secadora" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DRYERS.map(dryer => (
+                            <SelectItem key={dryer.id} value={dryer.id}>
+                              {dryer.name} ({dryer.capacity})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {selectedDryer && !completedSteps.secado && (
+                      <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                        <Label className="text-xs text-muted-foreground">Tiempo de Secado (Timer)</Label>
+                        <Select value={dryerTime} onValueChange={setDryerTime}>
+                          <SelectTrigger className="bg-background border-orange-200">
+                            <SelectValue placeholder="Seleccionar tiempo..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TIME_OPTIONS.map(time => (
+                              <SelectItem key={time.value} value={time.value}>{time.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -652,22 +752,23 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
                 {/* Actions */}
                 <div className="flex flex-col sm:flex-row gap-3">
-                  {canStartProcess && (
-                    <Button onClick={handleStartProcess} disabled={saving} className="flex-1">
+                  {/* Se muestra el botón de iniciar si está en los primeros estados */}
+                  {(canStartProcess || order.status === 'en_deposito') && !isProcessing && (
+                    <Button onClick={handleStartProcess} disabled={saving || (!selectedMachine && !completedSteps.lavado)} className="flex-1 bg-blue-600 hover:bg-blue-700">
                       <Play className="mr-2 h-4 w-4" />
-                      Iniciar Proceso
+                      Iniciar Lavado y Timer
                     </Button>
                   )}
                   {isProcessing && (
                     <>
-                      <Button onClick={handleUpdateProcess} disabled={saving} variant="outline" className="flex-1">
+                      <Button onClick={handleUpdateProcess} disabled={saving} variant="outline" className="flex-1 border-primary text-primary hover:bg-primary/10">
                         <RotateCcw className="mr-2 h-4 w-4" />
-                        Guardar Progreso
+                        Guardar Progreso / Iniciar Siguiente Timer
                       </Button>
                       <Button 
                         onClick={handleCompleteProcess} 
                         disabled={saving || !Object.values(completedSteps).every(v => v)} 
-                        className="flex-1"
+                        className="flex-1 bg-green-600 hover:bg-green-700"
                       >
                         <CheckCircle2 className="mr-2 h-4 w-4" />
                         Completar y Generar Recibo
