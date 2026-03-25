@@ -5,7 +5,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { 
   MapPin, Phone, QrCode, Navigation, CheckCircle2, Scale, 
-  Loader2, ChevronDown, ChevronUp, User, Truck, Store, RotateCcw, Lock
+  Loader2, ChevronDown, ChevronUp, User, Truck, Store, RotateCcw, Lock, PackageCheck, AlertTriangle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -13,6 +13,17 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { STATUS_LABELS, type OrderStatus } from '@/lib/types'
@@ -25,7 +36,7 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
-  const supabase = createClient()
+  const supabase = createClient()!
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [expanded, setExpanded] = useState(false)
@@ -291,7 +302,96 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                 </div>
               )}
 
-              {/* ... (Lógica de entrega al cliente) ... */}
+              {/* Delivery confirmation (M4) */}
+              {!isPickup && (
+                <div className="space-y-3">
+                  {order.status === 'en_ruta_entrega' && (
+                    <div className="space-y-3 pt-2 border-t border-dashed">
+                      <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
+                        <PackageCheck className="h-4 w-4 text-green-600 shrink-0" />
+                        <p className="text-xs text-green-700 font-medium">
+                          Lista para entrega. Confirma cuando el cliente reciba su ropa.
+                        </p>
+                      </div>
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            className="w-full bg-green-600 hover:bg-green-700 text-white"
+                            disabled={loading}
+                          >
+                            {loading
+                              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Procesando...</>
+                              : <><CheckCircle2 className="mr-2 h-4 w-4" /> Confirmar Entrega Final</>
+                            }
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="flex items-center gap-2">
+                              <AlertTriangle className="h-5 w-5 text-amber-500" />
+                              ¿Confirmar entrega final?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="space-y-2">
+                              <p>
+                                Estás a punto de marcar la orden <strong className="font-mono">{order.qr_code}</strong> como <strong>entregada</strong>.
+                              </p>
+                              <p className="text-sm">
+                                Esta acción es irreversible. Asegúrate de que el cliente ha recibido su ropa en buen estado.
+                              </p>
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-green-600 hover:bg-green-700"
+                              onClick={async () => {
+                                setLoading(true)
+                                try {
+                                  const { data: { user } } = await supabase.auth.getUser()
+                                  const { error } = await supabase
+                                    .from('orders')
+                                    .update({
+                                      status: 'entregado' as OrderStatus,
+                                      actual_delivery: new Date().toISOString(),
+                                      updated_at: new Date().toISOString(),
+                                    })
+                                    .eq('id', order.id)
+
+                                  if (error) throw error
+
+                                  await supabase.from('order_history').insert({
+                                    order_id: order.id,
+                                    status: 'entregado',
+                                    notes: 'Entrega final confirmada por domiciliario.',
+                                    changed_by: user?.id,
+                                  })
+
+                                  toast.success('¡Entrega confirmada! Orden completada.')
+                                  onUpdate?.()
+                                } catch (e: any) {
+                                  toast.error(`Error: ${e.message || 'Error al confirmar entrega'}`)
+                                } finally {
+                                  setLoading(false)
+                                }
+                              }}
+                            >
+                              Sí, confirmar entrega
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
+
+                  {order.status === 'entregado' && (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      <p className="text-sm font-medium text-green-700">Entrega completada ✓</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </CollapsibleContent>
         </CardContent>

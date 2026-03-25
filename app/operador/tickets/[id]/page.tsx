@@ -95,7 +95,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     doblado: false
   })
   const router = useRouter()
-  const supabase = createClient()
+  // supabase is always non-null when env vars are set; guards are in loadOrder useEffect
+  const supabase = createClient()!
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -185,7 +186,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     setAssigning(true)
     try {
       const valToSave = selectedDomiciliario === 'unassigned' ? null : selectedDomiciliario
-      
+      const { data: { user } } = await supabase.auth.getUser()
+
+      // Update delivery person
       const { error } = await supabase
         .from('orders')
         .update({ delivery_person_id: valToSave })
@@ -193,9 +196,29 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
       if (error) throw error
 
+      // If assigning (not removing) and order is ready for delivery, move to en_ruta_entrega
+      if (valToSave && (order?.status === 'listo' || order?.status === 'en_alistamiento')) {
+        await supabase
+          .from('orders')
+          .update({ status: 'en_ruta_entrega', updated_at: new Date().toISOString() })
+          .eq('id', id)
+
+        await supabase.from('order_history').insert({
+          order_id: id,
+          status: 'en_ruta_entrega',
+          notes: `Domiciliario asignado para entrega`,
+          changed_by: user?.id ?? null,
+        })
+      }
+
       toast.success(valToSave ? 'Domiciliario asignado correctamente' : 'Asignación removida')
       
-      setOrder((prev: any) => prev ? { ...prev, delivery_person_id: valToSave } : null)
+      const { data: newOrder } = await supabase.from('orders').select('*').eq('id', id).single()
+      if (newOrder) {
+        setOrder(newOrder)
+        if (newOrder.delivery_person_id) setSelectedDomiciliario(newOrder.delivery_person_id)
+        else setSelectedDomiciliario('unassigned')
+      }
     } catch (error: any) {
       console.error("Error completo de Supabase:", error);
       toast.error(`Error real: ${error.message || 'Revisa la consola'}`);
@@ -203,28 +226,110 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     setAssigning(false)
   }
 
-  // --- NUEVA LÓGICA DE TIMERS Y MÁQUINAS ---
-  const updateMachineTimer = async (machineId: string, minutes: number, type: 'lavadora' | 'secadora') => {
-    if (!machineId || !minutes) return;
+  // --- PHASE CONTROL (M3) ---
 
-    // Calculamos el tiempo de finalización sumando los minutos a la hora actual
-    const completionTime = new Date();
-    completionTime.setMinutes(completionTime.getMinutes() + minutes);
+  const writeHistory = async (newStatus: string, notes: string) => {
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('order_history').insert({
+      order_id: id,
+      status: newStatus,
+      notes,
+      changed_by: user?.id ?? null,
+    })
+  }
 
+  /** Operator confirms washing is done. Frees washer, moves order to en_secado. */
+  const handleConfirmWashingEnd = async () => {
+    setSaving(true)
     try {
-      // Supongo que tienes una tabla 'machines' o similar para controlar su estado. 
-      // Si el nombre de tu tabla es diferente, ajusta 'machines' por el nombre correcto.
+      // Mark washing_ended timestamp
       await supabase
-        .from('machines')
-        .update({ 
-          status: 'in_use', 
-          current_order_id: id,
-          end_time: completionTime.toISOString()
+        .from('washing_process')
+        .update({ washing_ended: new Date().toISOString(), lavado_completed: true })
+        .eq('order_id', id)
+
+      // Release the washer
+      if (selectedMachine) {
+        await supabase
+          .from('machines')
+          .update({ status: 'disponible', current_order_id: null, end_time: null })
+          .eq('id', selectedMachine)
+      }
+
+      // Update order status
+      await supabase
+        .from('orders')
+        .update({ status: 'en_secado', updated_at: new Date().toISOString() })
+        .eq('id', id)
+
+      await writeHistory('en_secado', 'Lavado completado por operador. Lavadora liberada.')
+
+      toast.success('Lavado confirmado. Orden pasa a secado.')
+      const { data: newOrder } = await supabase.from('orders').select('*').eq('id', id).single()
+      if (newOrder) setOrder(newOrder)
+    } catch { toast.error('Error al confirmar fin de lavado') }
+    setSaving(false)
+  }
+
+  /** Operator starts drying independently with its own timer. */
+  const handleStartDrying = async () => {
+    if (!selectedDryer) { toast.error('Selecciona una secadora'); return }
+    setSaving(true)
+    try {
+      const completionTime = new Date()
+      if (dryerTime) completionTime.setMinutes(completionTime.getMinutes() + parseInt(dryerTime))
+
+      // Update process with drying info
+      await supabase
+        .from('washing_process')
+        .update({
+          dryer_id: selectedDryer,
+          drying_started: new Date().toISOString(),
         })
-        .eq('id', machineId)
-    } catch (error) {
-      console.error(`Error actualizando el timer de la ${type}:`, error)
-    }
+        .eq('order_id', id)
+
+      // Set dryer in-use
+      if (dryerTime) {
+        await supabase
+          .from('machines')
+          .update({ status: 'en_uso', current_order_id: id, end_time: completionTime.toISOString(), total_minutes: parseInt(dryerTime) })
+          .eq('id', selectedDryer)
+      }
+
+      await writeHistory('en_secado', `Secado iniciado. Secadora: ${selectedDryer}.`)
+      toast.success('Timer de secadora activado.')
+    } catch { toast.error('Error al iniciar secado') }
+    setSaving(false)
+  }
+
+  /** Operator confirms drying is done. Frees dryer, moves to en_alistamiento. */
+  const handleConfirmDryingEnd = async () => {
+    setSaving(true)
+    try {
+      await supabase
+        .from('washing_process')
+        .update({ drying_ended: new Date().toISOString(), secado_completed: true })
+        .eq('order_id', id)
+
+      if (selectedDryer) {
+        await supabase
+          .from('machines')
+          .update({ status: 'disponible', current_order_id: null, end_time: null })
+          .eq('id', selectedDryer)
+      }
+
+      await supabase
+        .from('orders')
+        .update({ status: 'en_alistamiento', updated_at: new Date().toISOString() })
+        .eq('id', id)
+
+      await writeHistory('en_alistamiento', 'Secado completado por operador. Secadora liberada.')
+
+      toast.success('Secado confirmado. Orden pasa a alistamiento.')
+      const { data: newOrder } = await supabase.from('orders').select('*').eq('id', id).single()
+      if (newOrder) setOrder(newOrder)
+    } catch { toast.error('Error al confirmar fin de secado') }
+    setSaving(false)
   }
 
   const handleStartProcess = async () => {
@@ -236,6 +341,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     setSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
+      const completionTime = new Date()
+      if (machineTime) completionTime.setMinutes(completionTime.getMinutes() + parseInt(machineTime))
       
       const processPayload = {
         order_id: id,
@@ -243,6 +350,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         washing_machine_id: selectedMachine,
         dryer_id: selectedDryer || null,
         started_at: new Date().toISOString(),
+        washing_started: new Date().toISOString(),
         notes: processNotes,
         alistamiento_completed: completedSteps.alistamiento,
         lavado_completed: completedSteps.lavado,
@@ -257,15 +365,25 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         await supabase.from('washing_process').insert(processPayload)
       }
 
-      // Si se seleccionó un tiempo, encendemos el timer de la lavadora
+      // Activate machine timer
       if (selectedMachine && machineTime) {
-        await updateMachineTimer(selectedMachine, parseInt(machineTime), 'lavadora')
+        await supabase
+          .from('machines')
+          .update({ 
+            status: 'en_uso', 
+            current_order_id: id,
+            end_time: completionTime.toISOString(),
+            total_minutes: parseInt(machineTime)
+          })
+          .eq('id', selectedMachine)
       }
 
       await supabase
         .from('orders')
         .update({ status: 'en_lavado', updated_at: new Date().toISOString() })
         .eq('id', id)
+
+      await writeHistory('en_lavado', `Lavado iniciado. Lavadora: ${selectedMachine}.`)
 
       toast.success('Proceso de lavado iniciado y timer activado')
       
@@ -299,9 +417,14 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         })
         .eq('order_id', id)
 
-      // Si el operador acaba de marcar la secadora y le puso tiempo, encendemos el timer
+      // Activate dryer timer if selected and time provided
       if (selectedDryer && dryerTime && !completedSteps.secado) {
-        await updateMachineTimer(selectedDryer, parseInt(dryerTime), 'secadora')
+        const completionTime = new Date()
+        completionTime.setMinutes(completionTime.getMinutes() + parseInt(dryerTime))
+        await supabase
+          .from('machines')
+          .update({ status: 'en_uso', current_order_id: id, end_time: completionTime.toISOString(), total_minutes: parseInt(dryerTime) })
+          .eq('id', selectedDryer)
         toast.success('Timer de secadora activado')
       }
 
@@ -384,10 +507,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const calculateExtras = (prefs: OrderPreferences): number => {
     let extras = 0
     if (prefs.separate_whites) extras += 3000
-    if (prefs.apply_softener) extras += 2000
-    if (prefs.apply_bleach) extras += 2500
-    if (prefs.apply_degreaser) extras += 3000
-    if (prefs.ironing) extras += 5000
+    if (prefs.use_softener) extras += 2000
+    if (prefs.use_bleach) extras += 2500
+    if (prefs.use_degreaser) extras += 3000
+    if (prefs.ironing_required) extras += 5000
     return extras
   }
 
@@ -542,38 +665,38 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Suavizante</span>
-                      <Badge variant={preferences.apply_softener ? 'default' : 'secondary'}>
-                        {preferences.apply_softener ? 'Sí' : 'No'}
+                      <Badge variant={preferences.use_softener ? 'default' : 'secondary'}>
+                        {preferences.use_softener ? 'Sí' : 'No'}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Blanqueador</span>
-                      <Badge variant={preferences.apply_bleach ? 'default' : 'secondary'}>
-                        {preferences.apply_bleach ? 'Sí' : 'No'}
+                      <Badge variant={preferences.use_bleach ? 'default' : 'secondary'}>
+                        {preferences.use_bleach ? 'Sí' : 'No'}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Desengrasante</span>
-                      <Badge variant={preferences.apply_degreaser ? 'default' : 'secondary'}>
-                        {preferences.apply_degreaser ? 'Sí' : 'No'}
+                      <Badge variant={preferences.use_degreaser ? 'default' : 'secondary'}>
+                        {preferences.use_degreaser ? 'Sí' : 'No'}
                       </Badge>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm">Planchado</span>
-                      <Badge variant={preferences.ironing ? 'default' : 'secondary'}>
-                        {preferences.ironing ? 'Sí' : 'No'}
+                      <Badge variant={preferences.ironing_required ? 'default' : 'secondary'}>
+                        {preferences.ironing_required ? 'Sí' : 'No'}
                       </Badge>
                     </div>
-                    {preferences.scent && (
+                    {preferences.fragrance && (
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">Aroma</span>
-                        <Badge>{preferences.scent}</Badge>
+                        <span className="text-sm">Fragancia</span>
+                        <Badge>{preferences.fragrance}</Badge>
                       </div>
                     )}
-                    {preferences.special_instructions && (
+                    {preferences.notes && (
                       <div className="pt-2 border-t">
-                        <p className="text-sm text-muted-foreground">Instrucciones especiales:</p>
-                        <p className="text-sm mt-1">{preferences.special_instructions}</p>
+                        <p className="text-sm text-muted-foreground">Notas especiales:</p>
+                        <p className="text-sm mt-1">{preferences.notes}</p>
                       </div>
                     )}
                   </div>

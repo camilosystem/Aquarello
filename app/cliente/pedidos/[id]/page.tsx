@@ -51,6 +51,25 @@ export default async function OrderDetailPage({ params }: PageProps) {
     .eq('order_id', id)
     .order('created_at', { ascending: false })
 
+  // Get payment
+  const { data: payment } = await supabase
+    .from('payments')
+    .select('*')
+    .eq('order_id', id)
+    .eq('status', 'completado')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  // Get receipt
+  const { data: receipt } = await supabase
+    .from('receipts')
+    .select('*')
+    .eq('order_id', id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
   return (
     <div className="flex min-h-screen flex-col">
       <ClienteHeader userName={profile?.full_name} />
@@ -60,8 +79,8 @@ export default async function OrderDetailPage({ params }: PageProps) {
           order={order}
           preferences={order.order_preferences?.[0] || null}
           history={history || []}
-          payment={null}
-          receipt={null}
+          payment={payment || null}
+          receipt={receipt || null}
         />
       </main>
 

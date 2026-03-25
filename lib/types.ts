@@ -145,7 +145,7 @@ export interface Payment {
   id: string;
   order_id: string;
   amount: number;
-  payment_method: 'tarjeta' | 'nequi' | 'efectivo';
+  payment_method: 'tarjeta' | 'nequi' | 'efectivo' | 'transferencia' | 'daviplata';
   status: 'pendiente' | 'completado' | 'fallido' | 'reembolsado';
   transaction_id: string | null;
   paid_at: string | null;

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -22,7 +22,9 @@ import {
   Wind,
   Palette,
   Star,
-  AlertTriangle
+  AlertTriangle,
+  Send,
+  Wallet
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,6 +41,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import { OrderStatusTimeline } from './order-status-timeline'
 import { createClient } from '@/lib/supabase/client'
 import { 
@@ -52,6 +55,16 @@ import {
   type Receipt 
 } from '@/lib/types'
 
+type PaymentMethod = 'tarjeta' | 'nequi' | 'efectivo' | 'transferencia' | 'daviplata'
+
+const PAYMENT_METHODS: { value: PaymentMethod; label: string; icon: React.ElementType; color: string }[] = [
+  { value: 'tarjeta',       label: 'Tarjeta',       icon: CreditCard,  color: 'bg-blue-50 border-blue-200 text-blue-700' },
+  { value: 'nequi',         label: 'Nequi',         icon: Smartphone,  color: 'bg-purple-50 border-purple-200 text-purple-700' },
+  { value: 'daviplata',     label: 'Daviplata',     icon: Smartphone,  color: 'bg-red-50 border-red-200 text-red-700' },
+  { value: 'transferencia', label: 'Transferencia', icon: Send,        color: 'bg-green-50 border-green-200 text-green-700' },
+  { value: 'efectivo',      label: 'Efectivo',      icon: Banknote,    color: 'bg-yellow-50 border-yellow-200 text-yellow-700' },
+]
+
 interface OrderDetailClientProps {
   order: Order
   preferences: OrderPreferences | null
@@ -61,18 +74,23 @@ interface OrderDetailClientProps {
 }
 
 export function OrderDetailClient({ 
-  order, 
+  order: initialOrder, 
   preferences, 
-  history, 
+  history: initialHistory, 
   payment: initialPayment,
-  receipt 
+  receipt: initialReceipt
 }: OrderDetailClientProps) {
   const supabase = createClient()
+  const [order, setOrder] = useState(initialOrder)
+  const [history, setHistory] = useState(initialHistory)
+  const [receipt, setReceipt] = useState(initialReceipt)
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<'tarjeta' | 'nequi'>('tarjeta')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('tarjeta')
   const [processing, setProcessing] = useState(false)
   const [payment, setPayment] = useState(initialPayment)
+  const [statusChanged, setStatusChanged] = useState(false)
+  const prevStatusRef = useRef(initialOrder.status)
 
   // Generate QR code
   useEffect(() => {
@@ -94,34 +112,89 @@ export function OrderDetailClient({
     generateQR()
   }, [order.qr_code])
 
+  // Realtime subscription
+  useEffect(() => {
+    if (!supabase) return
+    const channel = supabase
+      .channel(`order-detail-${order.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders', filter: `id=eq.${order.id}` },
+        (payload) => {
+          const updated = payload.new as typeof order
+          if (updated.status !== prevStatusRef.current) {
+            setStatusChanged(true)
+            setTimeout(() => setStatusChanged(false), 1500)
+            prevStatusRef.current = updated.status
+            toast.info(`Estado actualizado: ${STATUS_LABELS[updated.status as keyof typeof STATUS_LABELS] ?? updated.status}`)
+          }
+          setOrder(updated)
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'order_history', filter: `order_id=eq.${order.id}` },
+        (payload) => {
+          setHistory(prev => [payload.new as typeof initialHistory[0], ...prev])
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order.id])
+
   const canPay = order.status === 'listo' || order.status === 'en_ruta_entrega'
   const isPaid = payment?.status === 'completado'
   const isDelivered = order.status === 'entregado'
 
   const handlePayment = async () => {
+    if (!supabase) return
     setProcessing(true)
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Brief artificial delay for UX
+      await new Promise(resolve => setTimeout(resolve, 800))
 
-      const { data: newPayment, error } = await supabase
+      const totalAmount = order.final_price || order.estimated_price || 0
+      const transactionId = `TRX-${Date.now()}`
+
+      // Insert payment
+      const { data: newPayment, error: paymentError } = await supabase
         .from('payments')
         .insert({
           order_id: order.id,
-          amount: order.final_price || order.estimated_price || 0,
+          amount: totalAmount,
           payment_method: paymentMethod,
           status: 'completado',
-          transaction_id: `TRX-${Date.now()}`,
+          transaction_id: transactionId,
           paid_at: new Date().toISOString(),
         })
         .select()
         .single()
 
-      if (error) throw error
+      if (paymentError) throw paymentError
+
+      // Create receipt if it doesn't exist yet
+      if (!receipt) {
+        const receiptNumber = `REC-${Date.now().toString(36).toUpperCase()}`
+        const { data: newReceipt } = await supabase
+          .from('receipts')
+          .insert({
+            order_id: order.id,
+            receipt_number: receiptNumber,
+            subtotal: totalAmount,
+            tax: 0,
+            total: totalAmount,
+            sent_to_client: false,
+          })
+          .select()
+          .single()
+        if (newReceipt) setReceipt(newReceipt)
+      }
 
       setPayment(newPayment)
       setPaymentDialogOpen(false)
-      toast.success('Pago realizado exitosamente')
+      toast.success('¡Pago realizado exitosamente!')
     } catch (error) {
       console.error('Payment error:', error)
       toast.error('Error al procesar el pago. Intenta de nuevo.')
@@ -168,15 +241,18 @@ export function OrderDetailClient({
       </Card>
 
       {/* Status Card */}
-      <Card>
+      <Card className={cn('transition-all duration-300', statusChanged && 'ring-2 ring-primary shadow-lg shadow-primary/10')}>
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">Estado del Pedido</CardTitle>
             <Badge 
               variant={isDelivered ? 'default' : 'secondary'}
-              className={isDelivered ? 'bg-green-100 text-green-800' : 'bg-primary/10 text-primary'}
+              className={cn(
+                isDelivered ? 'bg-green-100 text-green-800' : 'bg-primary/10 text-primary',
+                statusChanged && 'animate-pulse'
+              )}
             >
-              {STATUS_LABELS[order.status]}
+              {STATUS_LABELS[order.status as keyof typeof STATUS_LABELS] ?? order.status}
             </Badge>
           </div>
         </CardHeader>
@@ -310,13 +386,49 @@ export function OrderDetailClient({
           <CardTitle className="text-lg">Pago</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">
-              {order.final_price ? 'Total' : 'Estimado'}
-            </span>
-            <span className="text-xl font-bold text-primary">
-              {formatCOP(order.final_price || order.estimated_price || 0)}
-            </span>
+          {/* Price breakdown */}
+          <div className="space-y-2 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Lavado base ({order.weight_kg ?? 0} kg × $8.000)</span>
+              <span>{formatCOP((order.weight_kg ?? 0) * 8000)}</span>
+            </div>
+            {preferences?.separate_whites && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Separar blancos</span>
+                <span>+ {formatCOP(3000)}</span>
+              </div>
+            )}
+            {preferences?.use_softener && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Suavizante</span>
+                <span>+ {formatCOP(2000)}</span>
+              </div>
+            )}
+            {preferences?.use_bleach && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Blanqueador</span>
+                <span>+ {formatCOP(2500)}</span>
+              </div>
+            )}
+            {preferences?.use_degreaser && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Desengrasante</span>
+                <span>+ {formatCOP(3000)}</span>
+              </div>
+            )}
+            {preferences?.ironing_required && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Planchado</span>
+                <span>+ {formatCOP(5000)}</span>
+              </div>
+            )}
+            <Separator className="my-2" />
+            <div className="flex items-center justify-between font-bold text-base">
+              <span>{order.final_price ? 'Total' : 'Estimado'}</span>
+              <span className="text-primary">
+                {formatCOP(order.final_price || order.estimated_price || 0)}
+              </span>
+            </div>
           </div>
 
           {isPaid ? (
@@ -324,8 +436,8 @@ export function OrderDetailClient({
               <CheckCircle2 className="h-5 w-5" />
               <div>
                 <p className="font-medium">Pago completado</p>
-                <p className="text-sm">
-                  {payment?.payment_method === 'tarjeta' ? 'Tarjeta de crédito' : 'Nequi'} - {payment?.transaction_id}
+                <p className="text-sm capitalize">
+                  {payment?.payment_method} — {payment?.transaction_id}
                 </p>
               </div>
             </div>
@@ -333,40 +445,41 @@ export function OrderDetailClient({
             <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full">
-                  <CreditCard className="mr-2 h-4 w-4" />
+                  <Wallet className="mr-2 h-4 w-4" />
                   Pagar Ahora
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Realizar Pago</DialogTitle>
+                  <DialogTitle>Selecciona método de pago</DialogTitle>
                   <DialogDescription>
-                    Total a pagar: {formatCOP(order.final_price || order.estimated_price || 0)}
+                    Total: {formatCOP(order.final_price || order.estimated_price || 0)}
                   </DialogDescription>
                 </DialogHeader>
                 
-                <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    <Button
-                      variant={paymentMethod === 'tarjeta' ? 'default' : 'outline'}
-                      className="h-20 flex-col gap-2"
-                      onClick={() => setPaymentMethod('tarjeta')}
-                    >
-                      <CreditCard className="h-6 w-6" />
-                      <span className="text-xs">Tarjeta</span>
-                    </Button>
-                    <Button
-                      variant={paymentMethod === 'nequi' ? 'default' : 'outline'}
-                      className="h-20 flex-col gap-2"
-                      onClick={() => setPaymentMethod('nequi')}
-                    >
-                      <Smartphone className="h-6 w-6" />
-                      <span className="text-xs">Nequi</span>
-                    </Button>
+                <div className="space-y-4 py-2">
+                  {/* Payment method grid */}
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                    {PAYMENT_METHODS.map(({ value, label, icon: Icon, color }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setPaymentMethod(value)}
+                        className={cn(
+                          'flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 text-xs font-medium transition-all',
+                          paymentMethod === value
+                            ? color + ' border-current ring-2 ring-offset-1'
+                            : 'border-border hover:border-muted-foreground/40'
+                        )}
+                      >
+                        <Icon className="h-5 w-5" />
+                        {label}
+                      </button>
+                    ))}
                   </div>
 
                   {paymentMethod === 'tarjeta' && (
-                    <div className="space-y-3">
+                    <div className="space-y-3 animate-in fade-in slide-in-from-top-1">
                       <div className="space-y-2">
                         <Label>Número de tarjeta</Label>
                         <Input placeholder="1234 5678 9012 3456" />
@@ -384,10 +497,29 @@ export function OrderDetailClient({
                     </div>
                   )}
 
-                  {paymentMethod === 'nequi' && (
-                    <div className="space-y-2">
-                      <Label>Número Nequi</Label>
+                  {(paymentMethod === 'nequi' || paymentMethod === 'daviplata') && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                      <Label>Número de celular</Label>
                       <Input placeholder="300 123 4567" type="tel" />
+                    </div>
+                  )}
+
+                  {paymentMethod === 'transferencia' && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
+                      <div className="rounded-lg bg-muted p-3 text-sm space-y-1">
+                        <p className="font-medium">Datos bancarios</p>
+                        <p className="text-muted-foreground">Banco: Bancolombia</p>
+                        <p className="text-muted-foreground">Cuenta: 123-456789-00</p>
+                        <p className="text-muted-foreground">NIT: 900.123.456-7</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {paymentMethod === 'efectivo' && (
+                    <div className="animate-in fade-in slide-in-from-top-1">
+                      <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-3 text-sm text-yellow-800">
+                        El domiciliario recibirá el pago en efectivo al momento de la entrega.
+                      </div>
                     </div>
                   )}
 
@@ -402,7 +534,7 @@ export function OrderDetailClient({
                         Procesando...
                       </>
                     ) : (
-                      `Pagar ${formatCOP(order.final_price || order.estimated_price || 0)}`
+                      `Confirmar pago — ${formatCOP(order.final_price || order.estimated_price || 0)}`
                     )}
                   </Button>
                 </div>
@@ -421,28 +553,33 @@ export function OrderDetailClient({
 
       {/* Receipt */}
       {receipt && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Recibo</CardTitle>
+        <Card className="border-green-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              Recibo Oficial
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Número de recibo:</span>
-                <span className="font-mono">{receipt.receipt_number}</span>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Nº recibo</span>
+                <span className="font-mono text-foreground">{receipt.receipt_number}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal:</span>
+                <span className="text-muted-foreground">Subtotal</span>
                 <span>{formatCOP(receipt.subtotal)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">IVA:</span>
-                <span>{formatCOP(receipt.tax)}</span>
-              </div>
+              {receipt.tax > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">IVA</span>
+                  <span>{formatCOP(receipt.tax)}</span>
+                </div>
+              )}
               <Separator className="my-2" />
-              <div className="flex justify-between font-bold">
-                <span>Total:</span>
-                <span className="text-primary">{formatCOP(receipt.total)}</span>
+              <div className="flex justify-between font-bold text-base">
+                <span>Total pagado</span>
+                <span className="text-green-600">{formatCOP(receipt.total)}</span>
               </div>
             </div>
           </CardContent>
