@@ -59,6 +59,8 @@ export default function TicketsPage() {
 
     loadOrders()
 
+    if (!supabase) return
+
     // Real-time subscription
     const channel = supabase
       .channel('orders-changes')

@@ -35,19 +35,20 @@ import {
   Lock
 } from 'lucide-react'
 import type { Order, OrderPreferences, WashingProcess } from '@/lib/types'
+import { MachineTimer } from '@/components/operador/machine-timer'
 
-const WASHING_MACHINES = [
-  { id: 'LV-001', name: 'Lavadora Industrial 1', capacity: '20kg' },
-  { id: 'LV-002', name: 'Lavadora Industrial 2', capacity: '20kg' },
-  { id: 'LV-003', name: 'Lavadora Mediana 1', capacity: '12kg' },
-  { id: 'LV-004', name: 'Lavadora Mediana 2', capacity: '12kg' },
-  { id: 'LV-005', name: 'Lavadora Delicados', capacity: '8kg' },
+// Fallback mock machines (used if 'machines' table doesn't exist)
+const MOCK_WASHERS = [
+  { id: 'LV-001', name: 'Lavadora Industrial 1', capacity: '20kg', status: 'disponible' },
+  { id: 'LV-002', name: 'Lavadora Industrial 2', capacity: '20kg', status: 'disponible' },
+  { id: 'LV-003', name: 'Lavadora Mediana 1', capacity: '12kg', status: 'disponible' },
+  { id: 'LV-004', name: 'Lavadora Mediana 2', capacity: '12kg', status: 'disponible' },
+  { id: 'LV-005', name: 'Lavadora Delicados', capacity: '8kg', status: 'disponible' },
 ]
-
-const DRYERS = [
-  { id: 'SC-001', name: 'Secadora Industrial 1', capacity: '25kg' },
-  { id: 'SC-002', name: 'Secadora Industrial 2', capacity: '25kg' },
-  { id: 'SC-003', name: 'Secadora Mediana 1', capacity: '15kg' },
+const MOCK_DRYERS = [
+  { id: 'SC-001', name: 'Secadora Industrial 1', capacity: '25kg', status: 'disponible' },
+  { id: 'SC-002', name: 'Secadora Industrial 2', capacity: '25kg', status: 'disponible' },
+  { id: 'SC-003', name: 'Secadora Mediana 1', capacity: '15kg', status: 'disponible' },
 ]
 
 // NUEVO: Opciones de tiempo para los timers
@@ -97,6 +98,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const router = useRouter()
   // supabase is always non-null when env vars are set; guards are in loadOrder useEffect
   const supabase = createClient()!
+
+  // Live machine lists loaded from DB
+  const [washers, setWashers] = useState<{ id: string; name: string; capacity: string; status: string; end_time?: string | null; total_minutes?: number | null }[]>(MOCK_WASHERS)
+  const [dryers, setDryers] = useState<{ id: string; name: string; capacity: string; status: string; end_time?: string | null; total_minutes?: number | null }[]>(MOCK_DRYERS)
+  const [usingMockMachines, setUsingMockMachines] = useState(true)
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -173,6 +179,29 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     }
 
     loadOrder()
+
+    // Load machines from Supabase
+    const loadMachines = async () => {
+      const { data, error } = await supabase
+        .from('machines')
+        .select('id, name, capacity, type, status, end_time, total_minutes, current_order_id')
+        .order('name')
+      if (!error && data && data.length > 0) {
+        setWashers(data.filter((m: any) => m.type === 'lavadora'))
+        setDryers(data.filter((m: any) => m.type === 'secadora'))
+        setUsingMockMachines(false)
+      }
+    }
+    loadMachines()
+
+    // Realtime subscription to machines (updates status when washer/dryer changes)
+    const machinesChannel = supabase
+      .channel(`ticket-machines-${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'machines' }, () => loadMachines())
+      .subscribe()
+
+    return () => { supabase.removeChannel(machinesChannel) }
+
   }, [id, router, supabase])
 
   const handleStepToggle = (step: string) => {
@@ -761,23 +790,59 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 {/* NUEVO: Machine & Time Selection */}
                 <div className="grid md:grid-cols-2 gap-6 bg-muted/50 p-4 rounded-lg border">
                   
-                  {/* Lado Lavadora */}
+                  {/* Lavadora */}
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-2"><Droplets className="w-4 h-4 text-blue-500" /> Lavadora</Label>
-                      <Select value={selectedMachine} onValueChange={setSelectedMachine}>
+                      <Label className="flex items-center gap-2">
+                        <Droplets className="w-4 h-4 text-blue-500" /> Lavadora
+                        {usingMockMachines && <span className="text-xs text-yellow-600 ml-1">(demo)</span>}
+                      </Label>
+                      <Select
+                        value={selectedMachine}
+                        onValueChange={(v) => {
+                          // Only allow selecting disponible machines (or current assignment)
+                          const m = washers.find(x => x.id === v)
+                          if (m && m.status !== 'disponible' && v !== selectedMachine) {
+                            return // silently block — item is visually disabled
+                          }
+                          setSelectedMachine(v)
+                        }}
+                      >
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Seleccionar lavadora" />
                         </SelectTrigger>
                         <SelectContent>
-                          {WASHING_MACHINES.map(machine => (
-                            <SelectItem key={machine.id} value={machine.id}>
-                              {machine.name} ({machine.capacity})
+                          {washers.map(m => (
+                            <SelectItem
+                              key={m.id}
+                              value={m.id}
+                              disabled={m.status !== 'disponible' && m.id !== selectedMachine}
+                            >
+                              {m.name} ({m.capacity})
+                              {m.status === 'en_uso' && ' — En Uso'}
+                              {m.status === 'mantenimiento' && ' — Mantenimiento'}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
+
+                    {/* Live timer when washing is active */}
+                    {order.status === 'en_lavado' && selectedMachine && (() => {
+                      const m = washers.find(x => x.id === selectedMachine)
+                      return m?.end_time && m.total_minutes ? (
+                        <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg border border-blue-200">
+                          <span className="text-xs text-blue-700 font-medium">Timer lavado activo</span>
+                          <MachineTimer
+                            machineId={m.id}
+                            endTime={m.end_time!}
+                            totalMinutes={m.total_minutes!}
+                            type="lavadora"
+                            onComplete={() => { /* Realtime will refresh */ }}
+                          />
+                        </div>
+                      ) : null
+                    })()}
                     {selectedMachine && !completedSteps.lavado && (
                       <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
                         <Label className="text-xs text-muted-foreground">Tiempo de Lavado (Timer)</Label>
@@ -795,18 +860,33 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     )}
                   </div>
 
-                  {/* Lado Secadora */}
+                  {/* Secadora */}
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-2"><Wind className="w-4 h-4 text-orange-500" /> Secadora</Label>
-                      <Select value={selectedDryer} onValueChange={setSelectedDryer}>
+                      <Label className="flex items-center gap-2">
+                        <Wind className="w-4 h-4 text-orange-500" /> Secadora
+                      </Label>
+                      <Select
+                        value={selectedDryer}
+                        onValueChange={(v) => {
+                          const m = dryers.find(x => x.id === v)
+                          if (m && m.status !== 'disponible' && v !== selectedDryer) return
+                          setSelectedDryer(v)
+                        }}
+                      >
                         <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Seleccionar secadora" />
                         </SelectTrigger>
                         <SelectContent>
-                          {DRYERS.map(dryer => (
-                            <SelectItem key={dryer.id} value={dryer.id}>
-                              {dryer.name} ({dryer.capacity})
+                          {dryers.map(m => (
+                            <SelectItem
+                              key={m.id}
+                              value={m.id}
+                              disabled={m.status !== 'disponible' && m.id !== selectedDryer}
+                            >
+                              {m.name} ({m.capacity})
+                              {m.status === 'en_uso' && ' — En Uso'}
+                              {m.status === 'mantenimiento' && ' — Mantenimiento'}
                             </SelectItem>
                           ))}
                         </SelectContent>
