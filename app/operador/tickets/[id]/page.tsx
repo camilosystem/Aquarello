@@ -180,13 +180,46 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         setProcessNotes(processData.notes || '')
       }
 
+      // --- CROSS-REFERENCE WITH MACHINES TABLE ---
+      // If a machine has current_order_id = this order, we KNOW alistamiento is done
+      // and the wash is active, regardless of what orders.status says.
+      const { data: activeMachines } = await supabase
+        .from('machines')
+        .select('id, type, status, end_time, total_minutes')
+        .eq('current_order_id', id)
+
+      let detectedWasher = processData?.washing_machine_id || ''
+      let detectedDryer  = processData?.dryer_id || ''
+      let machineForced  = false
+
+      if (activeMachines && activeMachines.length > 0) {
+        for (const m of activeMachines) {
+          if (m.type === 'lavadora') { detectedWasher = m.id; machineForced = true }
+          if (m.type === 'secadora') { detectedDryer = m.id }
+        }
+      }
+
+      if (detectedWasher) setSelectedMachine(detectedWasher)
+      if (detectedDryer)  setSelectedDryer(detectedDryer)
+
       // Derive completed steps from order STATUS as the ground truth
-      // This ensures steps are always correct even if washing_process is missing
       const statusOrder = ['pendiente','recogido','en_deposito','en_transito','en_lavado','en_secado','en_alistamiento','listo','en_ruta_entrega','entregado','completado']
-      const statusIdx = statusOrder.indexOf(orderData.status)
+      let effectiveStatus = orderData.status
+
+      // Auto-repair: if machine is en_uso for this order but orders.status is stale, fix it
+      if (machineForced && !['en_lavado','en_secado','en_alistamiento','listo','en_ruta_entrega','entregado','completado'].includes(orderData.status)) {
+        await supabase
+          .from('orders')
+          .update({ status: 'en_lavado', updated_at: new Date().toISOString() })
+          .eq('id', id)
+        effectiveStatus = 'en_lavado'
+        setOrder({ ...orderData, status: 'en_lavado' })
+      }
+
+      const statusIdx = statusOrder.indexOf(effectiveStatus)
       const fromProcess = processData || {}
       setCompletedSteps({
-        alistamiento: (fromProcess as any).alistamiento_completed || statusIdx >= statusOrder.indexOf('en_lavado'),
+        alistamiento: (fromProcess as any).alistamiento_completed || machineForced || statusIdx >= statusOrder.indexOf('en_lavado'),
         lavado:       (fromProcess as any).lavado_completed       || statusIdx >= statusOrder.indexOf('en_secado'),
         secado:       (fromProcess as any).secado_completed       || statusIdx >= statusOrder.indexOf('en_alistamiento'),
         planchado:    (fromProcess as any).planchado_completed    || statusIdx >= statusOrder.indexOf('listo'),
