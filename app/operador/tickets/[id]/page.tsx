@@ -1062,8 +1062,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 {/* Smart Action Button — changes based on current order.status */}
                 <div className="flex flex-col sm:flex-row gap-3">
 
-                  {/* CANCEL PROCESS — visible whenever washing/drying is active */}
-                  {isProcessing && (
+                  {/* CANCEL PROCESS — visible whenever a wash is active or machine is assigned */}
+                  {(isProcessing || (process && selectedMachine)) && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" disabled={saving} className="flex-1 border-red-300 text-red-600 hover:bg-red-50">

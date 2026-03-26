@@ -16,8 +16,20 @@ import {
   CheckCircle2,
   AlertTriangle,
   Droplets,
-  WashingMachine
+  WashingMachine,
+  XCircle
 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 
 interface Machine {
@@ -126,6 +138,19 @@ export default function LavadorasPage() {
     else await loadMachines()
   }
 
+  const freeMachine = async (machine: Machine) => {
+    if (!supabase) return
+    const { error } = await supabase
+      .from('machines')
+      .update({ status: 'disponible', current_order_id: null, end_time: null, total_minutes: null })
+      .eq('id', machine.id)
+    if (error) toast.error('Error al liberar la máquina')
+    else {
+      toast.success(`${machine.name} liberada correctamente`)
+      await loadMachines()
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'disponible': return 'bg-green-100 text-green-800'
@@ -206,21 +231,57 @@ export default function LavadorasPage() {
           <p className="text-sm text-primary font-mono font-semibold mb-3">{machine.order_qr}</p>
         )}
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={() => toggleMachineStatus(machine)}
-          disabled={machine.status === 'en_uso'}
-        >
-          {machine.status === 'disponible' ? (
-            <><PowerOff className="mr-2 h-4 w-4" />Poner en Mantenimiento</>
-          ) : machine.status === 'mantenimiento' ? (
-            <><Power className="mr-2 h-4 w-4" />Activar</>
-          ) : (
-            <><Clock className="mr-2 h-4 w-4" />En Proceso</>
+        {/* Botones de acción */}
+        <div className="flex flex-col gap-2">
+          {/* Liberar Máquina — solo para en_uso */}
+          {machine.status === 'en_uso' && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Liberar Máquina
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Liberar {machine.name}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    La máquina quedará como <strong>Disponible</strong>. Esto no cancela la orden asignada — úsalo solo para corregir asignaciones erróneas.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Volver</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-red-600 hover:bg-red-700"
+                    onClick={(e) => { e.stopPropagation(); freeMachine(machine) }}
+                  >
+                    Sí, liberar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
-        </Button>
+          {/* Mantenimiento toggle — solo para disponible/mantenimiento */}
+          {machine.status !== 'en_uso' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={(e) => { e.stopPropagation(); toggleMachineStatus(machine) }}
+            >
+              {machine.status === 'disponible' ? (
+                <><PowerOff className="mr-2 h-4 w-4" />Poner en Mantenimiento</>
+              ) : (
+                <><Power className="mr-2 h-4 w-4" />Activar</>
+              )}
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   )
