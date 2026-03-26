@@ -366,13 +366,20 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       toast.error('Selecciona una lavadora para iniciar')
       return
     }
+    if (!machineTime) {
+      toast.error('Selecciona el tiempo de lavado')
+      return
+    }
 
     setSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const completionTime = new Date()
-      if (machineTime) completionTime.setMinutes(completionTime.getMinutes() + parseInt(machineTime))
+      completionTime.setMinutes(completionTime.getMinutes() + parseInt(machineTime))
       
+      // Alistamiento is confirmed when operator clicks this button
+      const newSteps = { ...completedSteps, alistamiento: true }
+
       const processPayload = {
         order_id: id,
         operator_id: user?.id,
@@ -381,11 +388,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         started_at: new Date().toISOString(),
         washing_started: new Date().toISOString(),
         notes: processNotes,
-        alistamiento_completed: completedSteps.alistamiento,
-        lavado_completed: completedSteps.lavado,
-        secado_completed: completedSteps.secado,
-        planchado_completed: completedSteps.planchado,
-        doblado_completed: completedSteps.doblado,
+        alistamiento_completed: true,
+        lavado_completed: false,
+        secado_completed: false,
+        planchado_completed: false,
+        doblado_completed: false,
       }
 
       if (process) {
@@ -412,15 +419,19 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         .update({ status: 'en_lavado', updated_at: new Date().toISOString() })
         .eq('id', id)
 
-      await writeHistory('en_lavado', `Lavado iniciado. Lavadora: ${selectedMachine}.`)
+      await writeHistory('en_lavado', `Lavado iniciado. Lavadora: ${selectedMachine}. Alistamiento confirmado.`)
 
-      toast.success('Proceso de lavado iniciado y timer activado')
+      toast.success('Proceso de lavado iniciado ✓ Alistamiento marcado')
       
+      // Refresh from DB
       const { data: newOrder } = await supabase.from('orders').select('*').eq('id', id).single()
       if (newOrder) setOrder(newOrder)
       
       const { data: newProcess } = await supabase.from('washing_process').select('*').eq('order_id', id).single()
       if (newProcess) setProcess(newProcess)
+
+      // Update local step state immediately
+      setCompletedSteps(newSteps)
       
     } catch {
       toast.error('Error al iniciar el proceso')
@@ -953,31 +964,103 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   />
                 </div>
 
-                {/* Actions */}
+                {/* Smart Action Button — changes based on current order.status */}
                 <div className="flex flex-col sm:flex-row gap-3">
-                  {/* Se muestra el botón de iniciar si está en los primeros estados */}
+                  
+                  {/* STEP 1: Not yet started — show Iniciar Lavado */}
                   {(canStartProcess || order.status === 'en_deposito') && !isProcessing && (
-                    <Button onClick={handleStartProcess} disabled={saving || (!selectedMachine && !completedSteps.lavado)} className="flex-1 bg-blue-600 hover:bg-blue-700">
+                    <Button
+                      onClick={handleStartProcess}
+                      disabled={saving || !selectedMachine || !machineTime}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    >
                       <Play className="mr-2 h-4 w-4" />
-                      Iniciar Lavado y Timer
+                      {saving ? 'Iniciando...' : 'Iniciar Lavado y Timer ▶'}
                     </Button>
                   )}
-                  {isProcessing && (
-                    <>
-                      <Button onClick={handleUpdateProcess} disabled={saving} variant="outline" className="flex-1 border-primary text-primary hover:bg-primary/10">
-                        <RotateCcw className="mr-2 h-4 w-4" />
-                        Guardar Progreso / Iniciar Siguiente Timer
-                      </Button>
-                      <Button 
-                        onClick={handleCompleteProcess} 
-                        disabled={saving || !Object.values(completedSteps).every(v => v)} 
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                      >
-                        <CheckCircle2 className="mr-2 h-4 w-4" />
-                        Completar y Generar Recibo
-                      </Button>
-                    </>
+
+                  {/* STEP 2: en_lavado — show Confirmar Lavado Completado */}
+                  {order.status === 'en_lavado' && (
+                    <Button
+                      onClick={handleConfirmWashingEnd}
+                      disabled={saving}
+                      className="flex-1 bg-cyan-600 hover:bg-cyan-700"
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      {saving ? 'Guardando...' : '✓ Confirmar Lavado Completado'}
+                    </Button>
                   )}
+
+                  {/* STEP 3a: en_secado without dryer assigned — show Iniciar Secado */}
+                  {order.status === 'en_secado' && !completedSteps.secado && !process?.drying_started && (
+                    <Button
+                      onClick={handleStartDrying}
+                      disabled={saving || !selectedDryer || !dryerTime}
+                      className="flex-1 bg-orange-500 hover:bg-orange-600"
+                    >
+                      <Play className="mr-2 h-4 w-4" />
+                      {saving ? 'Iniciando...' : 'Iniciar Secado y Timer ▶'}
+                    </Button>
+                  )}
+
+                  {/* STEP 3b: en_secado with dryer active — show Confirmar Secado */}
+                  {order.status === 'en_secado' && (process?.drying_started || completedSteps.secado) && (
+                    <Button
+                      onClick={handleConfirmDryingEnd}
+                      disabled={saving || completedSteps.secado}
+                      className="flex-1 bg-orange-600 hover:bg-orange-700"
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      {saving ? 'Guardando...' : '✓ Confirmar Secado Completado'}
+                    </Button>
+                  )}
+
+                  {/* STEP 4: en_alistamiento — Planchado */}
+                  {order.status === 'en_alistamiento' && !completedSteps.planchado && (
+                    <Button
+                      onClick={async () => {
+                        setSaving(true)
+                        try {
+                          await supabase.from('washing_process').update({ planchado_completed: true }).eq('order_id', id)
+                          await supabase.from('orders').update({ status: 'en_alistamiento', updated_at: new Date().toISOString() }).eq('id', id)
+                          await writeHistory('en_alistamiento', 'Planchado completado por operador.')
+                          setCompletedSteps(prev => ({ ...prev, planchado: true }))
+                          toast.success('✓ Planchado marcado como completado')
+                        } catch { toast.error('Error al confirmar planchado') }
+                        setSaving(false)
+                      }}
+                      disabled={saving}
+                      className="flex-1 bg-pink-600 hover:bg-pink-700"
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      {saving ? 'Guardando...' : '✓ Confirmar Planchado'}
+                    </Button>
+                  )}
+
+                  {/* STEP 5: en_alistamiento + planchado done — Confirmar Doblado = listo */}
+                  {order.status === 'en_alistamiento' && completedSteps.planchado && !completedSteps.doblado && (
+                    <Button
+                      onClick={async () => {
+                        setSaving(true)
+                        try {
+                          await supabase.from('washing_process').update({ doblado_completed: true }).eq('order_id', id)
+                          await supabase.from('orders').update({ status: 'listo', updated_at: new Date().toISOString() }).eq('id', id)
+                          await writeHistory('listo', 'Doblado completado. Orden lista para entrega.')
+                          setCompletedSteps(prev => ({ ...prev, doblado: true }))
+                          const { data: upd } = await supabase.from('orders').select('*').eq('id', id).single()
+                          if (upd) setOrder(upd)
+                          toast.success('✓ Doblado completado. ¡Orden lista para entrega!')
+                        } catch { toast.error('Error al confirmar doblado') }
+                        setSaving(false)
+                      }}
+                      disabled={saving}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      {saving ? 'Guardando...' : '✓ Confirmar Doblado — Marcar Listo'}
+                    </Button>
+                  )}
+
                 </div>
               </CardContent>
             </Card>

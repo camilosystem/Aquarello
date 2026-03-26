@@ -29,6 +29,7 @@ interface Machine {
   current_order_id: string | null
   end_time: string | null
   total_minutes: number | null
+  order_qr?: string | null
 }
 
 // Fallback mock data in case the machines table doesn't exist yet
@@ -63,7 +64,22 @@ export default function LavadorasPage() {
       setMachines(MOCK_MACHINES)
       setUsingMock(true)
     } else {
-      setMachines(data as Machine[])
+      // Fetch QR codes for in-use machines
+      const inUseIds = (data as Machine[]).filter(m => m.current_order_id).map(m => m.current_order_id!)
+      let qrMap: Record<string, string> = {}
+      if (inUseIds.length > 0) {
+        const { data: orders } = await supabase
+          .from('orders')
+          .select('id, qr_code')
+          .in('id', inUseIds)
+        if (orders) {
+          orders.forEach((o: any) => { qrMap[o.id] = o.qr_code })
+        }
+      }
+      setMachines((data as Machine[]).map(m => ({
+        ...m,
+        order_qr: m.current_order_id ? qrMap[m.current_order_id] || null : null
+      })))
       setUsingMock(false)
     }
   }, [supabase])
@@ -156,8 +172,8 @@ export default function LavadorasPage() {
           <div className="flex items-center justify-between mb-3 p-2 bg-muted/50 rounded-lg">
             <div className="text-sm">
               <p className="font-medium text-foreground">Ciclo activo</p>
-              {machine.current_order_id && (
-                <p className="text-xs font-mono text-muted-foreground mt-0.5">{machine.current_order_id}</p>
+              {machine.order_qr && (
+                <p className="text-xs font-mono text-primary mt-0.5 font-semibold">{machine.order_qr}</p>
               )}
             </div>
             <MachineTimer
@@ -173,8 +189,8 @@ export default function LavadorasPage() {
           </div>
         )}
 
-        {machine.status === 'en_uso' && !machine.end_time && machine.current_order_id && (
-          <p className="text-sm text-primary font-mono mb-3">{machine.current_order_id}</p>
+        {machine.status === 'en_uso' && !machine.end_time && machine.order_qr && (
+          <p className="text-sm text-primary font-mono font-semibold mb-3">{machine.order_qr}</p>
         )}
 
         <Button
