@@ -798,7 +798,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               </CardHeader>
               <CardContent className="space-y-6">
                 
-                {/* NUEVO: Machine & Time Selection */}
+                {/* Machine & Time Selection — only shown BEFORE washing starts */}
+                {!isProcessing && order.status !== 'listo' && (
                 <div className="grid md:grid-cols-2 gap-6 bg-muted/50 p-4 rounded-lg border">
                   
                   {/* Lavadora */}
@@ -920,6 +921,27 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     )}
                   </div>
                 </div>
+                )} {/* end machine selection panel */}
+
+                {/* Active process info banner — shown when washing/drying is running */}
+                {isProcessing && (
+                  <div className="flex flex-col sm:flex-row gap-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    {selectedMachine && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Droplets className="h-4 w-4 text-blue-500 shrink-0" />
+                        <span className="text-muted-foreground">Lavadora:</span>
+                        <span className="font-semibold text-blue-700">{washers.find(m => m.id === selectedMachine)?.name || selectedMachine}</span>
+                      </div>
+                    )}
+                    {selectedDryer && order.status === 'en_secado' && (
+                      <div className="flex items-center gap-2 text-sm">
+                        <Wind className="h-4 w-4 text-orange-500 shrink-0" />
+                        <span className="text-muted-foreground">Secadora:</span>
+                        <span className="font-semibold text-orange-700">{dryers.find(m => m.id === selectedDryer)?.name || selectedDryer}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <Separator />
 
