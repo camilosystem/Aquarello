@@ -156,7 +156,20 @@ export default function LavadorasPage() {
   }
 
   const MachineCard = ({ machine }: { machine: Machine }) => (
-    <Card className={machine.status === 'mantenimiento' ? 'opacity-60' : ''}>
+    <Card
+      className={`transition-colors ${
+        machine.status === 'mantenimiento' ? 'opacity-60' : ''
+      } ${
+        machine.status === 'en_uso' && machine.current_order_id
+          ? 'cursor-pointer hover:border-primary/60 hover:shadow-md'
+          : ''
+      }`}
+      onClick={() => {
+        if (machine.status === 'en_uso' && machine.current_order_id) {
+          router.push(`/operador/tickets/${machine.current_order_id}`)
+        }
+      }}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div>

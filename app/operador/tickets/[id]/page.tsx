@@ -166,14 +166,20 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         setSelectedMachine(processData.washing_machine_id || '')
         setSelectedDryer(processData.dryer_id || '')
         setProcessNotes(processData.notes || '')
-        setCompletedSteps({
-          alistamiento: processData.alistamiento_completed || false,
-          lavado: processData.lavado_completed || false,
-          secado: processData.secado_completed || false,
-          planchado: processData.planchado_completed || false,
-          doblado: processData.doblado_completed || false
-        })
       }
+
+      // Derive completed steps from order STATUS as the ground truth
+      // This ensures steps are always correct even if washing_process is missing
+      const statusOrder = ['pendiente','recogido','en_deposito','en_transito','en_lavado','en_secado','en_alistamiento','listo','en_ruta_entrega','entregado','completado']
+      const statusIdx = statusOrder.indexOf(orderData.status)
+      const fromProcess = processData || {}
+      setCompletedSteps({
+        alistamiento: (fromProcess as any).alistamiento_completed || statusIdx >= statusOrder.indexOf('en_lavado'),
+        lavado:       (fromProcess as any).lavado_completed       || statusIdx >= statusOrder.indexOf('en_secado'),
+        secado:       (fromProcess as any).secado_completed       || statusIdx >= statusOrder.indexOf('en_alistamiento'),
+        planchado:    (fromProcess as any).planchado_completed    || statusIdx >= statusOrder.indexOf('listo'),
+        doblado:      (fromProcess as any).doblado_completed      || statusIdx >= statusOrder.indexOf('listo'),
+      })
 
       setLoading(false)
     }
@@ -949,27 +955,36 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 <div className="space-y-4">
                   <Label>Pasos del Proceso</Label>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    {PROCESS_STEPS.map(step => (
-                      <div
-                        key={step.key}
-                        className={`p-4 rounded-lg border-2 text-center cursor-pointer transition-colors ${
-                          completedSteps[step.key]
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                        onClick={() => handleStepToggle(step.key)}
-                      >
-                        <step.icon className={`h-6 w-6 mx-auto mb-2 ${
-                          completedSteps[step.key] ? 'text-primary' : 'text-muted-foreground'
-                        }`} />
-                        <p className="text-sm font-medium">{step.label}</p>
-                        <Checkbox
-                          checked={completedSteps[step.key]}
-                          className="mt-2"
-                          onCheckedChange={() => handleStepToggle(step.key)}
-                        />
-                      </div>
-                    ))}
+                    {PROCESS_STEPS.map(step => {
+                      const done = completedSteps[step.key]
+                      return (
+                        <div
+                          key={step.key}
+                          className={`p-4 rounded-lg border-2 text-center transition-colors ${
+                            done
+                              ? 'border-green-500 bg-green-50 cursor-default'
+                              : 'border-border hover:border-primary/50 cursor-pointer'
+                          }`}
+                          onClick={() => !done && handleStepToggle(step.key)}
+                        >
+                          {done ? (
+                            <CheckCircle2 className="h-6 w-6 mx-auto mb-2 text-green-600" />
+                          ) : (
+                            <step.icon className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
+                          )}
+                          <p className={`text-sm font-medium ${done ? 'text-green-700' : ''}`}>{step.label}</p>
+                          {done ? (
+                            <p className="text-xs text-green-600 mt-1 font-semibold">✓ Completado</p>
+                          ) : (
+                            <Checkbox
+                              checked={false}
+                              className="mt-2"
+                              onCheckedChange={() => handleStepToggle(step.key)}
+                            />
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
 
