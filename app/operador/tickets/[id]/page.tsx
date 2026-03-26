@@ -13,6 +13,17 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { 
   ArrowLeft,
@@ -32,7 +43,8 @@ import {
   Send,
   FileText,
   Bike,
-  Lock
+  Lock,
+  XCircle
 } from 'lucide-react'
 import type { Order, OrderPreferences, WashingProcess } from '@/lib/types'
 import { MachineTimer } from '@/components/operador/machine-timer'
@@ -364,6 +376,52 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       const { data: newOrder } = await supabase.from('orders').select('*').eq('id', id).single()
       if (newOrder) setOrder(newOrder)
     } catch { toast.error('Error al confirmar fin de secado') }
+    setSaving(false)
+  }
+
+  /** Cancels the active process: releases machine, deletes washing_process, resets order to recogido */
+  const handleCancelProcess = async () => {
+    setSaving(true)
+    try {
+      // Release associated washer
+      if (selectedMachine) {
+        await supabase
+          .from('machines')
+          .update({ status: 'disponible', current_order_id: null, end_time: null, total_minutes: null })
+          .eq('id', selectedMachine)
+      }
+      // Release associated dryer (if any)
+      if (selectedDryer) {
+        await supabase
+          .from('machines')
+          .update({ status: 'disponible', current_order_id: null, end_time: null, total_minutes: null })
+          .eq('id', selectedDryer)
+      }
+      // Delete washing_process record
+      if (process) {
+        await supabase.from('washing_process').delete().eq('id', process.id)
+      }
+      // Reset order status to recogido
+      await supabase
+        .from('orders')
+        .update({ status: 'recogido', updated_at: new Date().toISOString() })
+        .eq('id', id)
+      await writeHistory('recogido', 'Proceso cancelado por operador. Máquinas liberadas.')
+
+      // Reset all local state
+      setProcess(null)
+      setSelectedMachine('')
+      setSelectedDryer('')
+      setMachineTime('')
+      setDryerTime('')
+      setCompletedSteps({ alistamiento: false, lavado: false, secado: false, planchado: false, doblado: false })
+      const { data: upd } = await supabase.from('orders').select('*').eq('id', id).single()
+      if (upd) setOrder(upd)
+
+      toast.success('Proceso cancelado. Máquinas liberadas. Orden reiniciada.')
+    } catch {
+      toast.error('Error al cancelar el proceso')
+    }
     setSaving(false)
   }
 
@@ -1003,6 +1061,35 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
 
                 {/* Smart Action Button — changes based on current order.status */}
                 <div className="flex flex-col sm:flex-row gap-3">
+
+                  {/* CANCEL PROCESS — visible whenever washing/drying is active */}
+                  {isProcessing && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" disabled={saving} className="flex-1 border-red-300 text-red-600 hover:bg-red-50">
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Cancelar Proceso
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>¿Cancelar el proceso de lavado?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Esta acción liberará la(s) máquina(s) asignada(s), eliminará el registro del proceso y volverá el estado de la orden a <strong>Recogido</strong>. No se puede deshacer.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Volver</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleCancelProcess}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Sí, cancelar proceso
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                   
                   {/* STEP 1: Not yet started — show Iniciar Lavado */}
                   {(canStartProcess || order.status === 'en_deposito') && !isProcessing && (
