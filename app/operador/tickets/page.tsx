@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
+import {
   Search,
   Filter,
   Shirt,
@@ -17,7 +17,8 @@ import {
   ChevronRight,
   QrCode,
   Scale,
-  MapPin
+  MapPin,
+  User
 } from 'lucide-react'
 import type { Order } from '@/lib/types'
 
@@ -95,9 +96,12 @@ export default function TicketsPage() {
 
     // Filter by search
     if (searchTerm) {
+      const term = searchTerm.toLowerCase()
       filtered = filtered.filter(o =>
-        o.qr_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        o.pickup_address.toLowerCase().includes(searchTerm.toLowerCase())
+        o.qr_code.toLowerCase().includes(term) ||
+        o.pickup_address.toLowerCase().includes(term) ||
+        (o.walk_in_name ?? '').toLowerCase().includes(term) ||
+        (o.walk_in_phone ?? '').toLowerCase().includes(term)
       )
     }
 
@@ -215,6 +219,10 @@ export default function TicketsPage() {
                               <div className="flex items-center gap-2">
                                 <QrCode className="h-4 w-4 text-muted-foreground" />
                                 <span className="font-mono font-medium">{order.qr_code}</span>
+                              </div>
+                              <div className="flex items-center gap-1 mt-0.5 text-sm font-medium text-foreground">
+                                <User className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span>{order.walk_in_name ?? order.client?.full_name ?? 'Cliente registrado'}</span>
                               </div>
                               <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                                 {order.weight_kg && (

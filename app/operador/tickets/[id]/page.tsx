@@ -756,6 +756,18 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
+                  <User className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Cliente</p>
+                    <p className="font-medium">
+                      {order.walk_in_name ?? order.client?.full_name ?? 'Cliente registrado'}
+                    </p>
+                    {order.walk_in_phone && (
+                      <p className="text-sm text-muted-foreground">{order.walk_in_phone}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
                   <QrCode className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Código QR</p>
