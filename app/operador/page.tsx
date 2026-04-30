@@ -8,14 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
-  ClipboardList, 
-  Shirt, 
+  ClipboardList,
+  Shirt,
   Package,
   Clock,
   CheckCircle2,
   AlertCircle,
   TrendingUp,
-  Users
+  Users,
+  Plus
 } from 'lucide-react'
 import type { Order, Profile } from '@/lib/types'
 
@@ -167,10 +168,16 @@ export default function OperadorDashboard() {
                 Bienvenido, {profile?.full_name || 'Operador'}
               </p>
             </div>
-            <Button onClick={() => router.push('/operador/tickets')}>
-              <ClipboardList className="mr-2 h-4 w-4" />
-              Ver Todos los Tickets
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => router.push('/operador/tickets')}>
+                <ClipboardList className="mr-2 h-4 w-4" />
+                Ver Tickets
+              </Button>
+              <Button onClick={() => router.push('/operador/nueva-orden')}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nueva Orden
+              </Button>
+            </div>
           </div>
 
           {/* Stats Cards */}

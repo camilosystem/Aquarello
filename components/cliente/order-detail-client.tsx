@@ -90,6 +90,7 @@ export function OrderDetailClient({
   const [processing, setProcessing] = useState(false)
   const [payment, setPayment] = useState(initialPayment)
   const [statusChanged, setStatusChanged] = useState(false)
+  const [subStatus, setSubStatus] = useState<'connecting' | 'live' | 'error'>('connecting')
   const prevStatusRef = useRef(initialOrder.status)
 
   // Generate QR code
@@ -128,7 +129,7 @@ export function OrderDetailClient({
             prevStatusRef.current = updated.status
             toast.info(`Estado actualizado: ${STATUS_LABELS[updated.status as keyof typeof STATUS_LABELS] ?? updated.status}`)
           }
-          setOrder(updated)
+          setOrder(prev => ({ ...prev, ...updated }))
         }
       )
       .on(
@@ -138,7 +139,11 @@ export function OrderDetailClient({
           setHistory(prev => [payload.new as typeof initialHistory[0], ...prev])
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') setSubStatus('live')
+        else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') setSubStatus('error')
+        else setSubStatus('connecting')
+      })
 
     return () => { supabase.removeChannel(channel) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -244,8 +249,31 @@ export function OrderDetailClient({
       <Card className={cn('transition-all duration-300', statusChanged && 'ring-2 ring-primary shadow-lg shadow-primary/10')}>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Estado del Pedido</CardTitle>
-            <Badge 
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg">Estado del Pedido</CardTitle>
+              {subStatus === 'live' && (
+                <span className="flex items-center gap-1 text-xs font-medium text-green-600">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+                  </span>
+                  En vivo
+                </span>
+              )}
+              {subStatus === 'error' && (
+                <span className="flex items-center gap-1 text-xs font-medium text-orange-500">
+                  <span className="h-2 w-2 rounded-full bg-orange-400" />
+                  Reconectando...
+                </span>
+              )}
+              {subStatus === 'connecting' && (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground animate-pulse" />
+                  Conectando...
+                </span>
+              )}
+            </div>
+            <Badge
               variant={isDelivered ? 'default' : 'secondary'}
               className={cn(
                 isDelivered ? 'bg-green-100 text-green-800' : 'bg-primary/10 text-primary',

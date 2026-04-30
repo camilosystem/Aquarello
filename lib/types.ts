@@ -62,7 +62,9 @@ export interface OrderPreferences {
 export interface Order {
   id: string;
   qr_code: string;
-  client_id: string;
+  user_id: string | null;
+  walk_in_name: string | null;
+  walk_in_phone: string | null;
   delivery_person_id: string | null;
   operator_id: string | null;
   driver_id: string | null;
