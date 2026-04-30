@@ -7,18 +7,17 @@ import { Sidebar } from '@/components/operador/sidebar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { MachineTimer } from '@/components/operador/machine-timer'
-import { 
-  Wind,
-  Power,
-  PowerOff,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  Droplets,
-  WashingMachine,
-  XCircle
-} from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +29,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import {
+  Wind,
+  Power,
+  PowerOff,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Droplets,
+  WashingMachine,
+  XCircle,
+  Plus,
+  Pencil,
+  Trash2,
+  Loader2,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Machine {
@@ -56,10 +70,26 @@ const MOCK_MACHINES: Machine[] = [
   { id: 'SC-003', name: 'Secadora Mediana 1', type: 'secadora', capacity: '15kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
 ]
 
+interface MachineForm {
+  name: string
+  type: 'lavadora' | 'secadora'
+  capacity: string
+}
+
+const EMPTY_FORM: MachineForm = { name: '', type: 'lavadora', capacity: '' }
+
 export default function LavadorasPage() {
   const [machines, setMachines] = useState<Machine[]>([])
   const [loading, setLoading] = useState(true)
   const [usingMock, setUsingMock] = useState(false)
+
+  // Dialog state
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create')
+  const [editingMachine, setEditingMachine] = useState<Machine | null>(null)
+  const [form, setForm] = useState<MachineForm>(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
+
   const router = useRouter()
   const supabase = createClient()
 
@@ -147,6 +177,64 @@ export default function LavadorasPage() {
     if (error) toast.error('Error al liberar la máquina')
     else {
       toast.success(`${machine.name} liberada correctamente`)
+      await loadMachines()
+    }
+  }
+
+  const openCreate = () => {
+    setForm(EMPTY_FORM)
+    setEditingMachine(null)
+    setDialogMode('create')
+    setDialogOpen(true)
+  }
+
+  const openEdit = (machine: Machine) => {
+    setForm({ name: machine.name, type: machine.type, capacity: machine.capacity })
+    setEditingMachine(machine)
+    setDialogMode('edit')
+    setDialogOpen(true)
+  }
+
+  const handleSave = async () => {
+    if (!form.name.trim() || !form.capacity.trim()) {
+      toast.error('Nombre y capacidad son obligatorios')
+      return
+    }
+    if (!supabase) return
+    setSaving(true)
+    try {
+      if (dialogMode === 'create') {
+        const { error } = await supabase
+          .from('machines')
+          .insert({ name: form.name.trim(), type: form.type, capacity: form.capacity.trim(), status: 'disponible' })
+        if (error) throw error
+        toast.success('Máquina creada correctamente')
+      } else if (editingMachine) {
+        const { error } = await supabase
+          .from('machines')
+          .update({ name: form.name.trim(), type: form.type, capacity: form.capacity.trim() })
+          .eq('id', editingMachine.id)
+        if (error) throw error
+        toast.success('Máquina actualizada correctamente')
+      }
+      setDialogOpen(false)
+      await loadMachines()
+    } catch {
+      toast.error('Error al guardar. Intenta de nuevo.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (machine: Machine) => {
+    if (!supabase) return
+    const { error } = await supabase
+      .from('machines')
+      .delete()
+      .eq('id', machine.id)
+    if (error) toast.error('Error al eliminar la máquina')
+    else {
+      toast.success(`${machine.name} eliminada`)
       await loadMachines()
     }
   }
@@ -281,6 +369,52 @@ export default function LavadorasPage() {
               )}
             </Button>
           )}
+          {/* Editar / Eliminar */}
+          {!usingMock && (
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-1"
+                onClick={(e) => { e.stopPropagation(); openEdit(machine) }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    disabled={machine.status === 'en_uso'}
+                    onClick={(e) => e.stopPropagation()}
+                    title={machine.status === 'en_uso' ? 'No se puede eliminar mientras está en uso' : ''}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Eliminar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Eliminar {machine.name}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta acción no se puede deshacer. La máquina será removida permanentemente del sistema.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive hover:bg-destructive/90"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(machine) }}
+                    >
+                      Sí, eliminar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -298,11 +432,19 @@ export default function LavadorasPage() {
               <h1 className="text-2xl font-bold text-foreground">Estado de Máquinas</h1>
               <p className="text-muted-foreground">Monitorea el estado de lavadoras y secadoras en tiempo real</p>
             </div>
-            {usingMock && (
-              <Badge variant="outline" className="text-yellow-700 border-yellow-300 bg-yellow-50">
-                Vista demo (tabla machines sin crear)
-              </Badge>
-            )}
+            <div className="flex items-center gap-3">
+              {usingMock && (
+                <Badge variant="outline" className="text-yellow-700 border-yellow-300 bg-yellow-50">
+                  Vista demo (tabla machines sin crear)
+                </Badge>
+              )}
+              {!usingMock && (
+                <Button onClick={openCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Nueva Máquina
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Stats */}
@@ -360,6 +502,67 @@ export default function LavadorasPage() {
           </Card>
         </div>
       </main>
+
+      {/* Dialog crear / editar */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {dialogMode === 'create' ? 'Nueva Máquina' : `Editar ${editingMachine?.name}`}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="machine-name">Nombre *</Label>
+              <Input
+                id="machine-name"
+                placeholder="Ej: Lavadora Industrial 3"
+                value={form.name}
+                onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="machine-type">Tipo *</Label>
+              <Select
+                value={form.type}
+                onValueChange={(v) => setForm(prev => ({ ...prev, type: v as 'lavadora' | 'secadora' }))}
+              >
+                <SelectTrigger id="machine-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lavadora">Lavadora</SelectItem>
+                  <SelectItem value="secadora">Secadora</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="machine-capacity">Capacidad *</Label>
+              <Input
+                id="machine-capacity"
+                placeholder="Ej: 20kg"
+                value={form.capacity}
+                onChange={(e) => setForm(prev => ({ ...prev, capacity: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
+                : dialogMode === 'create' ? 'Crear Máquina' : 'Guardar Cambios'
+              }
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
