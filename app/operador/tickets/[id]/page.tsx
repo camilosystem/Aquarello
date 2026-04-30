@@ -82,6 +82,7 @@ const PROCESS_STEPS = [
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const [order, setOrder] = useState<Order | any>(null)
+  const [clientName, setClientName] = useState<string | null>(null)
   const [preferences, setPreferences] = useState<OrderPreferences | null>(null)
   const [process, setProcess] = useState<WashingProcess | null>(null)
   const [domiciliarios, setDomiciliarios] = useState<any[]>([])
@@ -138,7 +139,19 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       }
 
       setOrder(orderData)
-      
+
+      // Fetch client name for registered clients
+      if (orderData.walk_in_name) {
+        setClientName(orderData.walk_in_name)
+      } else if (orderData.user_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', orderData.user_id)
+          .single()
+        setClientName(profile?.full_name ?? null)
+      }
+
       if (orderData.delivery_person_id) {
         setSelectedDomiciliario(orderData.delivery_person_id)
       } else {
@@ -759,9 +772,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   <User className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Cliente</p>
-                    <p className="font-medium">
-                      {order.walk_in_name ?? order.client?.full_name ?? 'Cliente registrado'}
-                    </p>
+                    <p className="font-medium">{clientName ?? 'Sin nombre'}</p>
                     {order.walk_in_phone && (
                       <p className="text-sm text-muted-foreground">{order.walk_in_phone}</p>
                     )}

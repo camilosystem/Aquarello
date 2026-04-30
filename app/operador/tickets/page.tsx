@@ -34,6 +34,7 @@ const STATUS_TABS = [
 export default function TicketsPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([])
+  const [profileNames, setProfileNames] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('all')
@@ -54,6 +55,18 @@ export default function TicketsPage() {
       if (!error && data) {
         setOrders(data)
         setFilteredOrders(data)
+
+        // Fetch profile names for registered clients
+        const userIds = [...new Set(data.filter(o => o.user_id).map(o => o.user_id as string))]
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', userIds)
+          if (profiles) {
+            setProfileNames(Object.fromEntries(profiles.map((p: any) => [p.id, p.full_name ?? ''])))
+          }
+        }
       }
       setLoading(false)
     }
@@ -97,12 +110,15 @@ export default function TicketsPage() {
     // Filter by search
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(o =>
-        o.qr_code.toLowerCase().includes(term) ||
-        o.pickup_address.toLowerCase().includes(term) ||
-        (o.walk_in_name ?? '').toLowerCase().includes(term) ||
-        (o.walk_in_phone ?? '').toLowerCase().includes(term)
-      )
+      filtered = filtered.filter(o => {
+        const clientName = o.walk_in_name ?? (o.user_id ? profileNames[o.user_id] : '') ?? ''
+        return (
+          o.qr_code.toLowerCase().includes(term) ||
+          o.pickup_address.toLowerCase().includes(term) ||
+          clientName.toLowerCase().includes(term) ||
+          (o.walk_in_phone ?? '').toLowerCase().includes(term)
+        )
+      })
     }
 
     setFilteredOrders(filtered)
@@ -222,7 +238,7 @@ export default function TicketsPage() {
                               </div>
                               <div className="flex items-center gap-1 mt-0.5 text-sm font-medium text-foreground">
                                 <User className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span>{order.walk_in_name ?? order.client?.full_name ?? 'Cliente registrado'}</span>
+                                <span>{order.walk_in_name ?? (order.user_id ? profileNames[order.user_id] : null) ?? 'Sin nombre'}</span>
                               </div>
                               <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                                 {order.weight_kg && (
