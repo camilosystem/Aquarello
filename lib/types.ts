@@ -126,10 +126,56 @@ export interface InventoryItem {
   quantity: number;
   unit: string;
   min_stock: number;
+  max_stock: number | null;
   cost_per_unit: number;
+  cost_per_box: number | null;
+  units_per_box: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// Supplier
+export interface Supplier {
+  id: string;
+  name: string;
+  contact_name: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Purchase (compra)
+export interface Purchase {
+  id: string;
+  supplier_id: string | null;
+  invoice_number: string | null;
+  purchase_date: string;
+  total_amount: number;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  supplier?: Supplier;
+  items?: PurchaseItem[];
+}
+
+// Purchase item (línea de compra)
+export interface PurchaseItem {
+  id: string;
+  purchase_id: string;
+  inventory_item_id: string;
+  quantity: number;
+  cost_per_box: number | null;
+  units_per_box: number;
+  unit_price: number;
+  total_price: number;
+  created_at: string;
+  inventory_item?: InventoryItem;
 }
 
 // Inventory usage
