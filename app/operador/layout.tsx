@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next"
+import { NotificationMonitor } from '@/components/operador/notification-monitor'
 
 export const metadata: Metadata = {
   title: "Lavva - Panel de Operadores",
@@ -14,5 +15,10 @@ export default function OperadorLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <>{children}</>
+  return (
+    <>
+      <NotificationMonitor />
+      {children}
+    </>
+  )
 }

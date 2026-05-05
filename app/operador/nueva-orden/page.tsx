@@ -5,6 +5,7 @@ import { NuevaOrdenForm } from '@/components/operador/nueva-orden-form'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { loadSettingsAction } from '@/app/operador/configuracion/actions'
 
 export default async function NuevaOrdenPage() {
   const supabase = await createClient()
@@ -29,6 +30,8 @@ export default async function NuevaOrdenPage() {
     redirect('/operador/login')
   }
 
+  const settings = await loadSettingsAction()
+
   return (
     <div className="flex min-h-screen bg-muted/30">
       <Sidebar user={user} />
@@ -49,7 +52,7 @@ export default async function NuevaOrdenPage() {
             </div>
           </div>
 
-          <NuevaOrdenForm operadorId={user.id} />
+          <NuevaOrdenForm operadorId={user.id} settings={settings} />
         </div>
       </main>
     </div>

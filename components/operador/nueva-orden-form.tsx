@@ -22,9 +22,11 @@ import {
 import { toast } from 'sonner'
 import { FRAGRANCE_OPTIONS, generateQRCode, formatCOP } from '@/lib/types'
 import { createOrdenOperadorAction } from '@/app/operador/nueva-orden/actions'
+import { type AppSettings, DEFAULT_SETTINGS } from '@/app/operador/configuracion/actions'
 
 interface NuevaOrdenFormProps {
   operadorId: string
+  settings?: AppSettings
 }
 
 interface WashingPreferences {
@@ -53,17 +55,16 @@ const DEFAULT_PREFERENCES: WashingPreferences = {
   notes: '',
 }
 
-const PRICE_PER_KG = 8000
-const ADDITIONAL_PRICES = {
-  ironing: 3000,
-  bleach: 1500,
-  degreaser: 2500,
-  stainTreatment: 4000,
-  delicateCare: 2000,
-  specialFolding: 1000,
-}
-
-export function NuevaOrdenForm({ operadorId }: NuevaOrdenFormProps) {
+export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: NuevaOrdenFormProps) {
+  const PRICE_PER_KG = settings.price_per_kg
+  const ADDITIONAL_PRICES = {
+    ironing: settings.price_ironing,
+    bleach: settings.price_bleach,
+    degreaser: settings.price_degreaser,
+    stainTreatment: settings.price_stain_treatment,
+    delicateCare: settings.price_delicate_care,
+    specialFolding: settings.price_special_folding,
+  }
   const router = useRouter()
 
   const [loading, setLoading] = useState(false)
