@@ -20,8 +20,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { createClient } from '@/lib/supabase/client'
 import { FRAGRANCE_OPTIONS, generateQRCode, formatCOP } from '@/lib/types'
+import { createOrdenOperadorAction } from '@/app/operador/nueva-orden/actions'
 
 interface NuevaOrdenFormProps {
   operadorId: string
@@ -65,7 +65,6 @@ const ADDITIONAL_PRICES = {
 
 export function NuevaOrdenForm({ operadorId }: NuevaOrdenFormProps) {
   const router = useRouter()
-  const supabase = createClient()
 
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
@@ -103,61 +102,40 @@ export function NuevaOrdenForm({ operadorId }: NuevaOrdenFormProps) {
   }
 
   const handleSubmit = async () => {
-    if (!supabase) {
-      toast.error('Error de conexión. Por favor recarga la página.')
-      return
-    }
-
     setLoading(true)
     try {
-      const qrCode = generateQRCode()
-      const receptionCode = Math.floor(100000 + Math.random() * 900000).toString()
-      const estimatedPrice = estimatePrice()
-
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          qr_code: qrCode,
-          reception_code: receptionCode,
-          user_id: null,
-          walk_in_name: clientName.trim(),
-          walk_in_phone: clientPhone.trim(),
-          operator_id: operadorId,
-          status: 'en_deposito',
-          pickup_address: address.trim() || 'Entrega en planta',
-          estimated_price: estimatedPrice,
-        })
-        .select()
-        .single()
-
-      if (orderError) throw orderError
-
-      await supabase.from('order_preferences').insert({
-        order_id: order.id,
-        separate_whites: preferences.separateWhites,
-        use_softener: preferences.useSoftener,
-        use_degreaser: preferences.useDegreaser,
-        use_bleach: preferences.useBleach,
-        fragrance: preferences.fragrance,
-        ironing_required: preferences.ironingRequired,
-        special_folding: preferences.specialFolding,
-        delicate_care: preferences.delicateCare,
-        stain_treatment: preferences.stainTreatment,
-        notes: preferences.notes || null,
+      const result = await createOrdenOperadorAction({
+        qr_code: generateQRCode(),
+        reception_code: Math.floor(100000 + Math.random() * 900000).toString(),
+        walk_in_name: clientName.trim(),
+        walk_in_phone: clientPhone.trim(),
+        operator_id: operadorId,
+        pickup_address: address.trim() || 'Entrega en planta',
+        estimated_price: estimatePrice(),
+        preferences: {
+          separate_whites: preferences.separateWhites,
+          use_softener: preferences.useSoftener,
+          use_degreaser: preferences.useDegreaser,
+          use_bleach: preferences.useBleach,
+          fragrance: preferences.fragrance,
+          ironing_required: preferences.ironingRequired,
+          special_folding: preferences.specialFolding,
+          delicate_care: preferences.delicateCare,
+          stain_treatment: preferences.stainTreatment,
+          notes: preferences.notes || null,
+        },
       })
 
-      await supabase.from('order_history').insert({
-        order_id: order.id,
-        status: 'en_deposito',
-        notes: `Orden creada en planta por operador para ${clientName.trim()}`,
-        changed_by: operadorId,
-      })
+      if (!result.ok) {
+        toast.error(`Error: ${result.error}`)
+        return
+      }
 
       toast.success('Orden creada exitosamente')
-      router.push(`/operador/tickets/${order.id}`)
+      router.push(`/operador/tickets/${result.id}`)
     } catch (error) {
       console.error('Error creating order:', error)
-      toast.error('Error al crear la orden. Intenta de nuevo.')
+      toast.error('Error inesperado. Intenta de nuevo.')
     } finally {
       setLoading(false)
     }

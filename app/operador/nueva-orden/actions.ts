@@ -1,0 +1,76 @@
+'use server'
+
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { revalidatePath } from 'next/cache'
+
+const getAdmin = () =>
+  createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+
+type OrdenInput = {
+  qr_code: string
+  reception_code: string
+  walk_in_name: string
+  walk_in_phone: string
+  operator_id: string
+  pickup_address: string
+  estimated_price: number
+  preferences: {
+    separate_whites: boolean
+    use_softener: boolean
+    use_degreaser: boolean
+    use_bleach: boolean
+    fragrance: string
+    ironing_required: boolean
+    special_folding: boolean
+    delicate_care: boolean
+    stain_treatment: boolean
+    notes: string | null
+  }
+}
+
+export async function createOrdenOperadorAction(
+  data: OrdenInput
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  try {
+    const admin = getAdmin()
+
+    const { data: order, error: orderError } = await admin
+      .from('orders')
+      .insert({
+        qr_code: data.qr_code,
+        reception_code: data.reception_code,
+        user_id: null,
+        walk_in_name: data.walk_in_name,
+        walk_in_phone: data.walk_in_phone,
+        operator_id: data.operator_id,
+        status: 'en_deposito',
+        pickup_address: data.pickup_address,
+        estimated_price: data.estimated_price,
+      })
+      .select('id')
+      .single()
+
+    if (orderError) return { ok: false, error: orderError.message }
+
+    await admin.from('order_preferences').insert({
+      order_id: order.id,
+      ...data.preferences,
+    })
+
+    await admin.from('order_history').insert({
+      order_id: order.id,
+      status: 'en_deposito',
+      notes: `Orden creada en planta por operador para ${data.walk_in_name}`,
+      changed_by: data.operator_id,
+    })
+
+    revalidatePath('/operador/tickets')
+    return { ok: true, id: order.id }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+}
