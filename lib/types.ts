@@ -70,6 +70,7 @@ export interface Order {
   driver_id: string | null;
   status: OrderStatus;
   weight_kg: number | null;
+  actual_weight: number | null;
   pickup_address: string;
   pickup_lat: number | null;
   pickup_lng: number | null;

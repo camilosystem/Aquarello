@@ -44,7 +44,9 @@ import {
   FileText,
   Bike,
   Lock,
-  XCircle
+  XCircle,
+  Save,
+  Loader2
 } from 'lucide-react'
 import type { Order, OrderPreferences, WashingProcess } from '@/lib/types'
 import { MachineTimer } from '@/components/operador/machine-timer'
@@ -90,6 +92,8 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [assigning, setAssigning] = useState(false)
+  const [weightInput, setWeightInput] = useState('')
+  const [savingWeight, setSavingWeight] = useState(false)
   
   const [selectedMachine, setSelectedMachine] = useState('')
   const [selectedDryer, setSelectedDryer] = useState('')
@@ -139,6 +143,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       }
 
       setOrder(orderData)
+      setWeightInput(String(orderData.actual_weight ?? orderData.weight_kg ?? ''))
 
       // Fetch client name for registered clients
       if (orderData.walk_in_name) {
@@ -273,6 +278,27 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       ...prev,
       [step]: !prev[step]
     }))
+  }
+
+  const handleSaveWeight = async () => {
+    const parsed = parseFloat(weightInput)
+    if (isNaN(parsed) || parsed <= 0) {
+      toast.error('Ingresa un peso válido mayor a 0')
+      return
+    }
+    setSavingWeight(true)
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ weight_kg: parsed, actual_weight: parsed, updated_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+      setOrder((prev: any) => ({ ...prev, weight_kg: parsed, actual_weight: parsed }))
+      toast.success('Peso actualizado')
+    } catch {
+      toast.error('Error al actualizar el peso')
+    }
+    setSavingWeight(false)
   }
 
   const handleAssignDomiciliario = async () => {
@@ -785,11 +811,33 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                     <p className="font-mono font-medium">{order.qr_code}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Scale className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Peso</p>
-                    <p className="font-medium">{order.actual_weight ? `${order.actual_weight} kg` : 'Sin pesar'}</p>
+                <div className="flex items-start gap-3">
+                  <Scale className="h-5 w-5 text-muted-foreground mt-2 shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground mb-1">Peso</p>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        value={weightInput}
+                        onChange={(e) => setWeightInput(e.target.value)}
+                        className="h-8 w-28"
+                        placeholder="0.0"
+                      />
+                      <span className="text-sm text-muted-foreground">kg</span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleSaveWeight}
+                        disabled={savingWeight}
+                        className="h-8 px-2"
+                      >
+                        {savingWeight
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <Save className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
