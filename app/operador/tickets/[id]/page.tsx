@@ -9,10 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +25,6 @@ import {
 import { toast } from 'sonner'
 import { 
   ArrowLeft,
-  Shirt,
   QrCode,
   Scale,
   MapPin,
@@ -35,12 +32,8 @@ import {
   User,
   Droplets,
   Wind,
-  Sparkles,
   CheckCircle2,
   Play,
-  Pause,
-  RotateCcw,
-  Send,
   FileText,
   Bike,
   Lock,
@@ -73,13 +66,6 @@ const TIME_OPTIONS = [
   { value: '60', label: '1 hora (Pesado)' },
 ]
 
-const PROCESS_STEPS = [
-  { key: 'alistamiento', label: 'Alistamiento', icon: Sparkles, status: 'en_alistamiento' },
-  { key: 'lavado', label: 'Lavado', icon: Droplets, status: 'en_lavado' },
-  { key: 'secado', label: 'Secado', icon: Wind, status: 'en_secado' },
-  { key: 'planchado', label: 'Planchado', icon: Shirt, status: 'en_alistamiento' },
-  { key: 'doblado', label: 'Doblado', icon: CheckCircle2, status: 'en_alistamiento' },
-]
 
 export default function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -272,13 +258,6 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     return () => { supabase.removeChannel(machinesChannel) }
 
   }, [id, router, supabase])
-
-  const handleStepToggle = (step: string) => {
-    setCompletedSteps(prev => ({
-      ...prev,
-      [step]: !prev[step]
-    }))
-  }
 
   const handleSaveWeight = async () => {
     const parsed = parseFloat(weightInput)
@@ -497,197 +476,115 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     setSaving(false)
   }
 
-  const handleStartProcess = async () => {
-    if (!selectedMachine && completedSteps.lavado === false) {
-      toast.error('Selecciona una lavadora para iniciar')
-      return
-    }
-    if (!machineTime) {
-      toast.error('Selecciona el tiempo de lavado')
-      return
-    }
+  const handleSaveAlistamiento = async () => {
+    setSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (process) {
+        await supabase.from('washing_process')
+          .update({ alistamiento_completed: true, updated_at: new Date().toISOString() })
+          .eq('order_id', id)
+      } else {
+        const { data: newProc } = await supabase.from('washing_process').insert({
+          order_id: id,
+          operator_id: user?.id,
+          alistamiento_completed: true,
+          lavado_completed: false,
+          secado_completed: false,
+          planchado_completed: false,
+          doblado_completed: false,
+        }).select().single()
+        if (newProc) setProcess(newProc)
+      }
+      setCompletedSteps(prev => ({ ...prev, alistamiento: true }))
+      await writeHistory(order.status, 'Alistamiento confirmado por operador.')
+      toast.success('✓ Alistamiento confirmado')
+    } catch { toast.error('Error al confirmar alistamiento') }
+    setSaving(false)
+  }
 
+  const handleStartLavado = async () => {
+    if (!selectedMachine) { toast.error('Selecciona una lavadora'); return }
+    if (!machineTime) { toast.error('Selecciona el tiempo de lavado'); return }
     setSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const completionTime = new Date()
       completionTime.setMinutes(completionTime.getMinutes() + parseInt(machineTime))
-      
-      // Alistamiento is confirmed when operator clicks this button
-      const newSteps = { ...completedSteps, alistamiento: true }
-
-      const processPayload = {
-        order_id: id,
-        operator_id: user?.id,
-        washing_machine_id: selectedMachine,
-        dryer_id: selectedDryer || null,
-        started_at: new Date().toISOString(),
-        washing_started: new Date().toISOString(),
-        notes: processNotes,
-        alistamiento_completed: true,
-        lavado_completed: false,
-        secado_completed: false,
-        planchado_completed: false,
-        doblado_completed: false,
-      }
 
       if (process) {
-        await supabase.from('washing_process').update(processPayload).eq('id', process.id)
+        await supabase.from('washing_process').update({
+          washing_machine_id: selectedMachine,
+          washing_started: new Date().toISOString(),
+          notes: processNotes,
+          updated_at: new Date().toISOString(),
+        }).eq('order_id', id)
       } else {
-        await supabase.from('washing_process').insert(processPayload)
+        const { data: newProc } = await supabase.from('washing_process').insert({
+          order_id: id,
+          operator_id: user?.id,
+          washing_machine_id: selectedMachine,
+          washing_started: new Date().toISOString(),
+          notes: processNotes,
+          alistamiento_completed: true,
+          lavado_completed: false,
+          secado_completed: false,
+          planchado_completed: false,
+          doblado_completed: false,
+        }).select().single()
+        if (newProc) setProcess(newProc)
       }
 
-      // Activate machine timer
-      if (selectedMachine && machineTime) {
-        await supabase
-          .from('machines')
-          .update({ 
-            status: 'en_uso', 
-            current_order_id: id,
-            end_time: completionTime.toISOString(),
-            total_minutes: parseInt(machineTime)
-          })
-          .eq('id', selectedMachine)
-      }
+      await supabase.from('machines').update({
+        status: 'en_uso', current_order_id: id,
+        end_time: completionTime.toISOString(),
+        total_minutes: parseInt(machineTime),
+      }).eq('id', selectedMachine)
 
-      await supabase
-        .from('orders')
+      await supabase.from('orders')
         .update({ status: 'en_lavado', updated_at: new Date().toISOString() })
         .eq('id', id)
 
-      await writeHistory('en_lavado', `Lavado iniciado. Lavadora: ${selectedMachine}. Alistamiento confirmado.`)
+      await writeHistory('en_lavado', `Lavado iniciado. Lavadora: ${selectedMachine}.`)
+      toast.success('✓ Lavado iniciado')
 
-      toast.success('Proceso de lavado iniciado ✓ Alistamiento marcado')
-      
-      // Refresh from DB
       const { data: newOrder } = await supabase.from('orders').select('*').eq('id', id).single()
       if (newOrder) setOrder(newOrder)
-      
-      const { data: newProcess } = await supabase.from('washing_process').select('*').eq('order_id', id).single()
-      if (newProcess) setProcess(newProcess)
-
-      // Update local step state immediately
-      setCompletedSteps(newSteps)
-      
-    } catch {
-      toast.error('Error al iniciar el proceso')
-    }
+      const { data: updProc } = await supabase.from('washing_process').select('*').eq('order_id', id).single()
+      if (updProc) setProcess(updProc)
+    } catch { toast.error('Error al iniciar el lavado') }
     setSaving(false)
   }
 
-  const handleUpdateProcess = async () => {
+  const handleFinishPlanchado = async () => {
     setSaving(true)
     try {
-      await supabase
-        .from('washing_process')
-        .update({
-          washing_machine_id: selectedMachine,
-          dryer_id: selectedDryer || null,
-          notes: processNotes,
-          alistamiento_completed: completedSteps.alistamiento,
-          lavado_completed: completedSteps.lavado,
-          secado_completed: completedSteps.secado,
-          planchado_completed: completedSteps.planchado,
-          doblado_completed: completedSteps.doblado,
-          updated_at: new Date().toISOString()
-        })
+      await supabase.from('washing_process')
+        .update({ planchado_completed: true, updated_at: new Date().toISOString() })
         .eq('order_id', id)
-
-      // Activate dryer timer if selected and time provided
-      if (selectedDryer && dryerTime && !completedSteps.secado) {
-        const completionTime = new Date()
-        completionTime.setMinutes(completionTime.getMinutes() + parseInt(dryerTime))
-        await supabase
-          .from('machines')
-          .update({ status: 'en_uso', current_order_id: id, end_time: completionTime.toISOString(), total_minutes: parseInt(dryerTime) })
-          .eq('id', selectedDryer)
-        toast.success('Timer de secadora activado')
-      }
-
-      let newStatus = order?.status || 'en_lavado'
-      if (completedSteps.lavado && !completedSteps.secado) {
-        newStatus = 'en_secado'
-      } else if (completedSteps.secado && !completedSteps.doblado) {
-        newStatus = 'en_alistamiento'
-      }
-
-      await supabase
-        .from('orders')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', id)
-
-      toast.success('Proceso actualizado')
-      
-      const { data: newOrder } = await supabase.from('orders').select('*').eq('id', id).single()
-      if (newOrder) setOrder(newOrder)
-      
-    } catch {
-      toast.error('Error al actualizar')
-    }
+      await writeHistory(order.status, 'Planchado completado por operador.')
+      setCompletedSteps(prev => ({ ...prev, planchado: true }))
+      toast.success('✓ Planchado confirmado')
+    } catch { toast.error('Error al confirmar planchado') }
     setSaving(false)
   }
 
-  const handleCompleteProcess = async () => {
-    if (!Object.values(completedSteps).every(v => v)) {
-      toast.error('Completa todos los pasos antes de finalizar')
-      return
-    }
-
+  const handleFinishDoblado = async () => {
     setSaving(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-
-      // Liberar las máquinas (Limpiar los timers)
-      if (selectedMachine) {
-        await supabase.from('machines').update({ status: 'available', current_order_id: null, end_time: null }).eq('id', selectedMachine)
-      }
-      if (selectedDryer) {
-        await supabase.from('machines').update({ status: 'available', current_order_id: null, end_time: null }).eq('id', selectedDryer)
-      }
-
-      await supabase
-        .from('washing_process')
-        .update({
-          completed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+      await supabase.from('washing_process')
+        .update({ doblado_completed: true, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('order_id', id)
-
-      await supabase
-        .from('orders')
-        .update({ status: 'en_ruta_entrega', updated_at: new Date().toISOString() })
+      await supabase.from('orders')
+        .update({ status: 'listo', updated_at: new Date().toISOString() })
         .eq('id', id)
-
-      const totalAmount = (order?.weight_kg || 1) * 8000
-      await supabase
-        .from('receipts')
-        .insert({
-          order_id: id,
-          generated_by: user?.id,
-          total_amount: totalAmount,
-          breakdown: {
-            base: (order?.weight_kg || 1) * 8000,
-            extras: preferences ? calculateExtras(preferences) : 0
-          }
-        })
-
-      toast.success('Proceso completado. Máquinas liberadas. Recibo generado.')
-      router.push('/operador/tickets')
-      
-    } catch {
-      toast.error('Error al completar el proceso')
-    }
+      await writeHistory('listo', 'Doblado completado. Orden lista para entrega.')
+      setCompletedSteps(prev => ({ ...prev, doblado: true }))
+      const { data: upd } = await supabase.from('orders').select('*').eq('id', id).single()
+      if (upd) setOrder(upd)
+      toast.success('✓ Doblado completado. ¡Orden lista para entrega!')
+    } catch { toast.error('Error al confirmar doblado') }
     setSaving(false)
-  }
-
-  const calculateExtras = (prefs: OrderPreferences): number => {
-    let extras = 0
-    if (prefs.separate_whites) extras += 3000
-    if (prefs.use_softener) extras += 2000
-    if (prefs.use_bleach) extras += 2500
-    if (prefs.use_degreaser) extras += 3000
-    if (prefs.ironing_required) extras += 5000
-    return extras
   }
 
   const getStatusColor = (status: string) => {
@@ -955,341 +852,259 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             </CardContent>
           </Card>
 
-          {/* Process Control */}
+          {/* Process Control — Stepper */}
           {!isCompleted && (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Control de Proceso (Con Timers)</CardTitle>
-                <CardDescription>
-                  {canStartProcess ? 'Configura y comienza el proceso de lavado' : 'Gestiona el progreso del lavado'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                
-                {/* Machine & Time Selection — only shown BEFORE washing starts */}
-                {!isProcessing && order.status !== 'listo' && (
-                <div className="grid md:grid-cols-2 gap-6 bg-muted/50 p-4 rounded-lg border">
-                  
-                  {/* Lavadora */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Droplets className="w-4 h-4 text-blue-500" /> Lavadora
-                        {usingMockMachines && <span className="text-xs text-yellow-600 ml-1">(demo)</span>}
-                      </Label>
-                      <Select
-                        value={selectedMachine}
-                        onValueChange={(v) => {
-                          // Only allow selecting disponible machines (or current assignment)
-                          const m = washers.find(x => x.id === v)
-                          if (m && m.status !== 'disponible' && v !== selectedMachine) {
-                            return // silently block — item is visually disabled
-                          }
-                          setSelectedMachine(v)
-                        }}
-                      >
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Seleccionar lavadora" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {washers.map(m => (
-                            <SelectItem
-                              key={m.id}
-                              value={m.id}
-                              disabled={m.status !== 'disponible' && m.id !== selectedMachine}
-                            >
-                              {m.name} ({m.capacity})
-                              {m.status === 'en_uso' && ' — En Uso'}
-                              {m.status === 'mantenimiento' && ' — Mantenimiento'}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Live timer when washing is active */}
-                    {order.status === 'en_lavado' && selectedMachine && (() => {
-                      const m = washers.find(x => x.id === selectedMachine)
-                      return m?.end_time && m.total_minutes ? (
-                        <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg border border-blue-200">
-                          <span className="text-xs text-blue-700 font-medium">Timer lavado activo</span>
-                          <MachineTimer
-                            machineId={m.id}
-                            endTime={m.end_time!}
-                            totalMinutes={m.total_minutes!}
-                            type="lavadora"
-                            onComplete={() => { /* Realtime will refresh */ }}
-                          />
-                        </div>
-                      ) : null
-                    })()}
-                    {selectedMachine && !completedSteps.lavado && (
-                      <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                        <Label className="text-xs text-muted-foreground">Tiempo de Lavado (Timer)</Label>
-                        <Select value={machineTime} onValueChange={setMachineTime}>
-                          <SelectTrigger className="bg-background border-blue-200">
-                            <SelectValue placeholder="Seleccionar tiempo..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TIME_OPTIONS.map(time => (
-                              <SelectItem key={time.value} value={time.value}>{time.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base">Control del Proceso</CardTitle>
+                    <CardDescription>Completa cada etapa en orden</CardDescription>
                   </div>
-
-                  {/* Secadora */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Wind className="w-4 h-4 text-orange-500" /> Secadora
-                      </Label>
-                      <Select
-                        value={selectedDryer}
-                        onValueChange={(v) => {
-                          const m = dryers.find(x => x.id === v)
-                          if (m && m.status !== 'disponible' && v !== selectedDryer) return
-                          setSelectedDryer(v)
-                        }}
-                      >
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Seleccionar secadora" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {dryers.map(m => (
-                            <SelectItem
-                              key={m.id}
-                              value={m.id}
-                              disabled={m.status !== 'disponible' && m.id !== selectedDryer}
-                            >
-                              {m.name} ({m.capacity})
-                              {m.status === 'en_uso' && ' — En Uso'}
-                              {m.status === 'mantenimiento' && ' — Mantenimiento'}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {selectedDryer && !completedSteps.secado && (
-                      <div className="space-y-2 animate-in fade-in slide-in-from-top-1">
-                        <Label className="text-xs text-muted-foreground">Tiempo de Secado (Timer)</Label>
-                        <Select value={dryerTime} onValueChange={setDryerTime}>
-                          <SelectTrigger className="bg-background border-orange-200">
-                            <SelectValue placeholder="Seleccionar tiempo..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TIME_OPTIONS.map(time => (
-                              <SelectItem key={time.value} value={time.value}>{time.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                )} {/* end machine selection panel */}
-
-                {/* Active process info banner — shown when washing/drying is running */}
-                {isProcessing && (
-                  <div className="flex flex-col sm:flex-row gap-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    {selectedMachine && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Droplets className="h-4 w-4 text-blue-500 shrink-0" />
-                        <span className="text-muted-foreground">Lavadora:</span>
-                        <span className="font-semibold text-blue-700">{washers.find(m => m.id === selectedMachine)?.name || selectedMachine}</span>
-                      </div>
-                    )}
-                    {selectedDryer && order.status === 'en_secado' && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Wind className="h-4 w-4 text-orange-500 shrink-0" />
-                        <span className="text-muted-foreground">Secadora:</span>
-                        <span className="font-semibold text-orange-700">{dryers.find(m => m.id === selectedDryer)?.name || selectedDryer}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <Separator />
-
-                {/* Process Steps */}
-                <div className="space-y-4">
-                  <Label>Pasos del Proceso</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                    {PROCESS_STEPS.map(step => {
-                      const done = completedSteps[step.key]
-                      return (
-                        <div
-                          key={step.key}
-                          className={`p-4 rounded-lg border-2 text-center transition-colors ${
-                            done
-                              ? 'border-green-500 bg-green-50 cursor-default'
-                              : 'border-border hover:border-primary/50 cursor-pointer'
-                          }`}
-                          onClick={() => !done && handleStepToggle(step.key)}
-                        >
-                          {done ? (
-                            <CheckCircle2 className="h-6 w-6 mx-auto mb-2 text-green-600" />
-                          ) : (
-                            <step.icon className="h-6 w-6 mx-auto mb-2 text-muted-foreground" />
-                          )}
-                          <p className={`text-sm font-medium ${done ? 'text-green-700' : ''}`}>{step.label}</p>
-                          {done ? (
-                            <p className="text-xs text-green-600 mt-1 font-semibold">✓ Completado</p>
-                          ) : (
-                            <Checkbox
-                              checked={false}
-                              className="mt-2"
-                              onCheckedChange={() => handleStepToggle(step.key)}
-                            />
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Notes */}
-                <div className="space-y-2">
-                  <Label>Notas del Proceso</Label>
-                  <Textarea
-                    placeholder="Observaciones, problemas encontrados, etc."
-                    value={processNotes}
-                    onChange={(e) => setProcessNotes(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-
-                {/* Smart Action Button — changes based on current order.status */}
-                <div className="flex flex-col sm:flex-row gap-3">
-
-                  {/* CANCEL PROCESS — visible whenever a wash is active or machine is assigned */}
                   {(isProcessing || (process && selectedMachine)) && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="outline" disabled={saving} className="flex-1 border-red-300 text-red-600 hover:bg-red-50">
-                          <XCircle className="mr-2 h-4 w-4" />
-                          Cancelar Proceso
+                        <Button variant="outline" size="sm" disabled={saving}
+                          className="border-red-200 text-red-600 hover:bg-red-50 shrink-0">
+                          <XCircle className="mr-1.5 h-3.5 w-3.5" /> Cancelar proceso
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>¿Cancelar el proceso de lavado?</AlertDialogTitle>
+                          <AlertDialogTitle>¿Cancelar el proceso?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Esta acción liberará la(s) máquina(s) asignada(s), eliminará el registro del proceso y volverá el estado de la orden a <strong>Recogido</strong>. No se puede deshacer.
+                            Se liberarán las máquinas y el estado de la orden volverá a <strong>Recogido</strong>. No se puede deshacer.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Volver</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleCancelProcess}
-                            className="bg-red-600 hover:bg-red-700"
-                          >
-                            Sí, cancelar proceso
+                          <AlertDialogAction onClick={handleCancelProcess} className="bg-red-600 hover:bg-red-700">
+                            Sí, cancelar
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
-                  
-                  {/* STEP 1: Not yet started — show Iniciar Lavado */}
-                  {(canStartProcess || order.status === 'en_deposito') && !isProcessing && (
-                    <Button
-                      onClick={handleStartProcess}
-                      disabled={saving || !selectedMachine || !machineTime}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700"
-                    >
-                      <Play className="mr-2 h-4 w-4" />
-                      {saving ? 'Iniciando...' : 'Iniciar Lavado y Timer ▶'}
-                    </Button>
-                  )}
-
-                  {/* STEP 2: en_lavado — show Confirmar Lavado Completado */}
-                  {order.status === 'en_lavado' && (
-                    <Button
-                      onClick={handleConfirmWashingEnd}
-                      disabled={saving}
-                      className="flex-1 bg-cyan-600 hover:bg-cyan-700"
-                    >
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      {saving ? 'Guardando...' : '✓ Confirmar Lavado Completado'}
-                    </Button>
-                  )}
-
-                  {/* STEP 3a: en_secado without dryer assigned — show Iniciar Secado */}
-                  {order.status === 'en_secado' && !completedSteps.secado && !process?.drying_started && (
-                    <Button
-                      onClick={handleStartDrying}
-                      disabled={saving || !selectedDryer || !dryerTime}
-                      className="flex-1 bg-orange-500 hover:bg-orange-600"
-                    >
-                      <Play className="mr-2 h-4 w-4" />
-                      {saving ? 'Iniciando...' : 'Iniciar Secado y Timer ▶'}
-                    </Button>
-                  )}
-
-                  {/* STEP 3b: en_secado with dryer active — show Confirmar Secado */}
-                  {order.status === 'en_secado' && (process?.drying_started || completedSteps.secado) && (
-                    <Button
-                      onClick={handleConfirmDryingEnd}
-                      disabled={saving || completedSteps.secado}
-                      className="flex-1 bg-orange-600 hover:bg-orange-700"
-                    >
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      {saving ? 'Guardando...' : '✓ Confirmar Secado Completado'}
-                    </Button>
-                  )}
-
-                  {/* STEP 4: en_alistamiento — Planchado */}
-                  {order.status === 'en_alistamiento' && !completedSteps.planchado && (
-                    <Button
-                      onClick={async () => {
-                        setSaving(true)
-                        try {
-                          await supabase.from('washing_process').update({ planchado_completed: true }).eq('order_id', id)
-                          await supabase.from('orders').update({ status: 'en_alistamiento', updated_at: new Date().toISOString() }).eq('id', id)
-                          await writeHistory('en_alistamiento', 'Planchado completado por operador.')
-                          setCompletedSteps(prev => ({ ...prev, planchado: true }))
-                          toast.success('✓ Planchado marcado como completado')
-                        } catch { toast.error('Error al confirmar planchado') }
-                        setSaving(false)
-                      }}
-                      disabled={saving}
-                      className="flex-1 bg-pink-600 hover:bg-pink-700"
-                    >
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      {saving ? 'Guardando...' : '✓ Confirmar Planchado'}
-                    </Button>
-                  )}
-
-                  {/* STEP 5: en_alistamiento + planchado done — Confirmar Doblado = listo */}
-                  {order.status === 'en_alistamiento' && completedSteps.planchado && !completedSteps.doblado && (
-                    <Button
-                      onClick={async () => {
-                        setSaving(true)
-                        try {
-                          await supabase.from('washing_process').update({ doblado_completed: true }).eq('order_id', id)
-                          await supabase.from('orders').update({ status: 'listo', updated_at: new Date().toISOString() }).eq('id', id)
-                          await writeHistory('listo', 'Doblado completado. Orden lista para entrega.')
-                          setCompletedSteps(prev => ({ ...prev, doblado: true }))
-                          const { data: upd } = await supabase.from('orders').select('*').eq('id', id).single()
-                          if (upd) setOrder(upd)
-                          toast.success('✓ Doblado completado. ¡Orden lista para entrega!')
-                        } catch { toast.error('Error al confirmar doblado') }
-                        setSaving(false)
-                      }}
-                      disabled={saving}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      {saving ? 'Guardando...' : '✓ Confirmar Doblado — Marcar Listo'}
-                    </Button>
-                  )}
-
                 </div>
+              </CardHeader>
+              <CardContent className="p-0 divide-y">
+
+                {/* ── PASO 1: Alistamiento ── */}
+                <div className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 ${completedSteps.alistamiento ? 'bg-green-500 border-green-500 text-white' : 'border-muted-foreground/30 text-muted-foreground'}`}>
+                      {completedSteps.alistamiento ? '✓' : '1'}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`font-medium text-sm ${completedSteps.alistamiento ? 'text-green-700' : ''}`}>Alistamiento</p>
+                      <p className="text-xs text-muted-foreground">Clasificar y preparar la ropa</p>
+                    </div>
+                    {completedSteps.alistamiento && <Badge className="bg-green-100 text-green-800 text-xs shrink-0">Completado</Badge>}
+                  </div>
+                  {!completedSteps.alistamiento && canStartProcess && (
+                    <div className="ml-10 mt-3">
+                      <Button size="sm" onClick={handleSaveAlistamiento} disabled={saving}>
+                        {saving ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-2 h-3.5 w-3.5" />}
+                        Confirmar Alistamiento
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── PASO 2: Lavado ── */}
+                <div className={`p-4 transition-opacity ${!completedSteps.alistamiento ? 'opacity-40 pointer-events-none' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 ${completedSteps.lavado ? 'bg-green-500 border-green-500 text-white' : order.status === 'en_lavado' ? 'bg-blue-500 border-blue-500 text-white' : 'border-muted-foreground/30 text-muted-foreground'}`}>
+                      {completedSteps.lavado ? '✓' : order.status === 'en_lavado' ? '▶' : '2'}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`font-medium text-sm ${completedSteps.lavado ? 'text-green-700' : order.status === 'en_lavado' ? 'text-blue-700' : ''}`}>Lavado</p>
+                      <p className="text-xs text-muted-foreground">Lavado en máquina</p>
+                    </div>
+                    {completedSteps.lavado && <Badge className="bg-green-100 text-green-800 text-xs shrink-0">Completado</Badge>}
+                    {order.status === 'en_lavado' && !completedSteps.lavado && <Badge className="bg-blue-100 text-blue-800 text-xs shrink-0">En progreso</Badge>}
+                  </div>
+                  {completedSteps.alistamiento && !completedSteps.lavado && (
+                    <div className="ml-10 mt-3 space-y-3">
+                      {order.status !== 'en_lavado' ? (
+                        <>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Droplets className="h-3 w-3" /> Lavadora
+                                {usingMockMachines && <span className="text-yellow-500">(demo)</span>}
+                              </Label>
+                              <Select value={selectedMachine} onValueChange={(v) => {
+                                const m = washers.find(x => x.id === v)
+                                if (m && m.status !== 'disponible' && v !== selectedMachine) return
+                                setSelectedMachine(v)
+                              }}>
+                                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Seleccionar…" /></SelectTrigger>
+                                <SelectContent>
+                                  {washers.map(m => (
+                                    <SelectItem key={m.id} value={m.id} disabled={m.status !== 'disponible' && m.id !== selectedMachine}>
+                                      {m.name} ({m.capacity}){m.status === 'en_uso' ? ' — En uso' : ''}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Tiempo</Label>
+                              <Select value={machineTime} onValueChange={setMachineTime}>
+                                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Seleccionar…" /></SelectTrigger>
+                                <SelectContent>
+                                  {TIME_OPTIONS.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <Button size="sm" onClick={handleStartLavado} disabled={saving || !selectedMachine || !machineTime} className="bg-blue-600 hover:bg-blue-700">
+                            <Play className="mr-2 h-3.5 w-3.5" />{saving ? 'Iniciando…' : 'Iniciar Lavado'}
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 p-2 bg-blue-50 rounded-lg border border-blue-200">
+                            <Droplets className="h-4 w-4 text-blue-600 shrink-0" />
+                            <span className="text-sm text-blue-700 font-medium flex-1">{washers.find(m => m.id === selectedMachine)?.name || 'Lavadora activa'}</span>
+                            {(() => { const m = washers.find(x => x.id === selectedMachine); return m?.end_time && m.total_minutes ? (
+                              <MachineTimer machineId={m.id} endTime={m.end_time!} totalMinutes={m.total_minutes!} type="lavadora" onComplete={() => {}} />
+                            ) : null })()}
+                          </div>
+                          <Button size="sm" onClick={handleConfirmWashingEnd} disabled={saving} className="bg-cyan-600 hover:bg-cyan-700">
+                            <CheckCircle2 className="mr-2 h-3.5 w-3.5" />{saving ? 'Guardando…' : 'Terminar Lavado'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── PASO 3: Secado ── */}
+                <div className={`p-4 transition-opacity ${!completedSteps.lavado ? 'opacity-40 pointer-events-none' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 ${completedSteps.secado ? 'bg-green-500 border-green-500 text-white' : (order.status === 'en_secado' && process?.drying_started) ? 'bg-orange-500 border-orange-500 text-white' : 'border-muted-foreground/30 text-muted-foreground'}`}>
+                      {completedSteps.secado ? '✓' : (order.status === 'en_secado' && process?.drying_started) ? '▶' : '3'}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`font-medium text-sm ${completedSteps.secado ? 'text-green-700' : (order.status === 'en_secado' && process?.drying_started) ? 'text-orange-700' : ''}`}>Secado</p>
+                      <p className="text-xs text-muted-foreground">Secado en máquina</p>
+                    </div>
+                    {completedSteps.secado && <Badge className="bg-green-100 text-green-800 text-xs shrink-0">Completado</Badge>}
+                    {order.status === 'en_secado' && process?.drying_started && !completedSteps.secado && <Badge className="bg-orange-100 text-orange-800 text-xs shrink-0">En progreso</Badge>}
+                  </div>
+                  {completedSteps.lavado && !completedSteps.secado && (
+                    <div className="ml-10 mt-3 space-y-3">
+                      {!process?.drying_started ? (
+                        <>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Wind className="h-3 w-3" /> Secadora
+                              </Label>
+                              <Select value={selectedDryer} onValueChange={(v) => {
+                                const m = dryers.find(x => x.id === v)
+                                if (m && m.status !== 'disponible' && v !== selectedDryer) return
+                                setSelectedDryer(v)
+                              }}>
+                                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Seleccionar…" /></SelectTrigger>
+                                <SelectContent>
+                                  {dryers.map(m => (
+                                    <SelectItem key={m.id} value={m.id} disabled={m.status !== 'disponible' && m.id !== selectedDryer}>
+                                      {m.name} ({m.capacity}){m.status === 'en_uso' ? ' — En uso' : ''}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">Tiempo</Label>
+                              <Select value={dryerTime} onValueChange={setDryerTime}>
+                                <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Seleccionar…" /></SelectTrigger>
+                                <SelectContent>
+                                  {TIME_OPTIONS.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <Button size="sm" onClick={handleStartDrying} disabled={saving || !selectedDryer || !dryerTime} className="bg-orange-500 hover:bg-orange-600">
+                            <Play className="mr-2 h-3.5 w-3.5" />{saving ? 'Iniciando…' : 'Iniciar Secado'}
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-3 p-2 bg-orange-50 rounded-lg border border-orange-200">
+                            <Wind className="h-4 w-4 text-orange-600 shrink-0" />
+                            <span className="text-sm text-orange-700 font-medium flex-1">{dryers.find(m => m.id === selectedDryer)?.name || 'Secadora activa'}</span>
+                            {(() => { const m = dryers.find(x => x.id === selectedDryer); return m?.end_time && m.total_minutes ? (
+                              <MachineTimer machineId={m.id} endTime={m.end_time!} totalMinutes={m.total_minutes!} type="secadora" onComplete={() => {}} />
+                            ) : null })()}
+                          </div>
+                          <Button size="sm" onClick={handleConfirmDryingEnd} disabled={saving} className="bg-orange-600 hover:bg-orange-700">
+                            <CheckCircle2 className="mr-2 h-3.5 w-3.5" />{saving ? 'Guardando…' : 'Terminar Secado'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── PASO 4: Planchado ── */}
+                <div className={`p-4 transition-opacity ${!completedSteps.secado ? 'opacity-40 pointer-events-none' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 ${completedSteps.planchado ? 'bg-green-500 border-green-500 text-white' : 'border-muted-foreground/30 text-muted-foreground'}`}>
+                      {completedSteps.planchado ? '✓' : '4'}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`font-medium text-sm ${completedSteps.planchado ? 'text-green-700' : ''}`}>Planchado</p>
+                      <p className="text-xs text-muted-foreground">Planchado de prendas</p>
+                    </div>
+                    {completedSteps.planchado && <Badge className="bg-green-100 text-green-800 text-xs shrink-0">Completado</Badge>}
+                  </div>
+                  {completedSteps.secado && !completedSteps.planchado && (
+                    <div className="ml-10 mt-3">
+                      <Button size="sm" onClick={handleFinishPlanchado} disabled={saving} className="bg-pink-600 hover:bg-pink-700">
+                        <CheckCircle2 className="mr-2 h-3.5 w-3.5" />{saving ? 'Guardando…' : 'Confirmar Planchado'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── PASO 5: Doblado ── */}
+                <div className={`p-4 transition-opacity ${!completedSteps.planchado ? 'opacity-40 pointer-events-none' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border-2 ${completedSteps.doblado ? 'bg-green-500 border-green-500 text-white' : 'border-muted-foreground/30 text-muted-foreground'}`}>
+                      {completedSteps.doblado ? '✓' : '5'}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`font-medium text-sm ${completedSteps.doblado ? 'text-green-700' : ''}`}>Doblado</p>
+                      <p className="text-xs text-muted-foreground">Doblado y empaque final</p>
+                    </div>
+                    {completedSteps.doblado && <Badge className="bg-green-100 text-green-800 text-xs shrink-0">Completado</Badge>}
+                  </div>
+                  {completedSteps.planchado && !completedSteps.doblado && (
+                    <div className="ml-10 mt-3">
+                      <Button size="sm" onClick={handleFinishDoblado} disabled={saving} className="bg-green-600 hover:bg-green-700">
+                        <CheckCircle2 className="mr-2 h-3.5 w-3.5" />{saving ? 'Guardando…' : 'Confirmar Doblado — Marcar Listo'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notas */}
+                <div className="p-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Notas del proceso</Label>
+                    <Textarea
+                      placeholder="Observaciones, problemas encontrados, etc."
+                      value={processNotes}
+                      onChange={(e) => setProcessNotes(e.target.value)}
+                      rows={2}
+                    />
+                  </div>
+                </div>
+
               </CardContent>
             </Card>
           )}
