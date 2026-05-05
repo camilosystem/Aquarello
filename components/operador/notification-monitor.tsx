@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
-import { SETTINGS_ID, type AppSettings } from '@/app/operador/configuracion/actions'
+import { SETTINGS_ID, type AppSettings } from '@/app/operador/configuracion/settings'
 
 export function NotificationMonitor() {
   const settingsRef = useRef<AppSettings | null>(null)

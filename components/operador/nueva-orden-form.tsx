@@ -22,7 +22,7 @@ import {
 import { toast } from 'sonner'
 import { FRAGRANCE_OPTIONS, generateQRCode, formatCOP } from '@/lib/types'
 import { createOrdenOperadorAction } from '@/app/operador/nueva-orden/actions'
-import { type AppSettings, DEFAULT_SETTINGS } from '@/app/operador/configuracion/actions'
+import { type AppSettings, DEFAULT_SETTINGS } from '@/app/operador/configuracion/settings'
 
 interface NuevaOrdenFormProps {
   operadorId: string

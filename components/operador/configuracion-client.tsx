@@ -10,7 +10,8 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
 import { Settings, DollarSign, Bell, Shield, Building2, Save, Loader2, Clock } from 'lucide-react'
-import { saveSettingsAction, type AppSettings } from '@/app/operador/configuracion/actions'
+import { saveSettingsAction } from '@/app/operador/configuracion/actions'
+import { type AppSettings } from '@/app/operador/configuracion/settings'
 import { formatCOP } from '@/lib/types'
 
 interface Props {
