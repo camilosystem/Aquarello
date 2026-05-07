@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/sheet'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { PWAInstallButton } from '@/components/pwa-install-button'
 
 interface HeaderProps {
   userName?: string | null
@@ -85,6 +86,12 @@ export function ClienteHeader({ userName }: HeaderProps) {
                   <span>Mi Perfil</span>
                 </Link>
                 <div className="my-4 border-t" />
+                <PWAInstallButton
+                  variant="outline"
+                  size="sm"
+                  label="Instalar App Lavva"
+                  className="w-full justify-start px-3"
+                />
                 <button
                   onClick={handleSignOut}
                   className="flex items-center gap-3 rounded-lg px-3 py-3 text-destructive transition-colors hover:bg-destructive/10"

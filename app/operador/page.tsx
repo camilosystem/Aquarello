@@ -18,6 +18,7 @@ import {
   Users,
   Plus
 } from 'lucide-react'
+import { PWAInstallButton } from '@/components/pwa-install-button'
 import type { Order, Profile } from '@/lib/types'
 
 interface DashboardStats {
@@ -168,7 +169,8 @@ export default function OperadorDashboard() {
                 Bienvenido, {profile?.full_name || 'Operador'}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <PWAInstallButton variant="outline" size="sm" />
               <Button variant="outline" onClick={() => router.push('/operador/tickets')}>
                 <ClipboardList className="mr-2 h-4 w-4" />
                 Ver Tickets
