@@ -341,94 +341,86 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   const handleConfirmWashingEnd = async () => {
     setSaving(true)
     try {
-      // Mark washing_ended timestamp
-      await supabase
+      const { error: e1 } = await supabase
         .from('washing_process')
-        .update({ washing_ended: new Date().toISOString(), lavado_completed: true })
+        .update({ washing_ended: new Date().toISOString(), lavado_completed: true, updated_at: new Date().toISOString() })
         .eq('order_id', id)
+      if (e1) { toast.error(`Error al guardar lavado: ${e1.message}`); return }
 
-      // Release the washer
       if (selectedMachine) {
-        await supabase
-          .from('machines')
+        await supabase.from('machines')
           .update({ status: 'disponible', current_order_id: null, end_time: null })
           .eq('id', selectedMachine)
       }
 
-      // Update order status
-      await supabase
-        .from('orders')
+      const { error: e2 } = await supabase.from('orders')
         .update({ status: 'en_secado', updated_at: new Date().toISOString() })
         .eq('id', id)
+      if (e2) { toast.error(`Error al actualizar estado: ${e2.message}`); return }
 
       await writeHistory('en_secado', 'Lavado completado por operador. Lavadora liberada.')
-
-      toast.success('Lavado confirmado. Orden pasa a secado.')
+      setCompletedSteps(prev => ({ ...prev, lavado: true }))
+      toast.success('✓ Lavado confirmado. Orden pasa a secado.')
       const { data: newOrder } = await supabase.from('orders').select('*').eq('id', id).single()
       if (newOrder) setOrder(newOrder)
-    } catch { toast.error('Error al confirmar fin de lavado') }
-    setSaving(false)
+    } catch (e: any) { toast.error(`Error: ${e?.message ?? 'Error al confirmar lavado'}`) }
+    finally { setSaving(false) }
   }
 
   /** Operator starts drying independently with its own timer. */
   const handleStartDrying = async () => {
     if (!selectedDryer) { toast.error('Selecciona una secadora'); return }
+    if (!dryerTime) { toast.error('Selecciona el tiempo de secado'); return }
     setSaving(true)
     try {
       const completionTime = new Date()
-      if (dryerTime) completionTime.setMinutes(completionTime.getMinutes() + parseInt(dryerTime))
+      completionTime.setMinutes(completionTime.getMinutes() + parseInt(dryerTime))
 
-      // Update process with drying info
-      await supabase
-        .from('washing_process')
-        .update({
-          dryer_id: selectedDryer,
-          drying_started: new Date().toISOString(),
-        })
+      const { error: e1 } = await supabase.from('washing_process')
+        .update({ dryer_id: selectedDryer, drying_started: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('order_id', id)
+      if (e1) { toast.error(`Error al guardar secado: ${e1.message}`); return }
 
-      // Set dryer in-use
-      if (dryerTime) {
-        await supabase
-          .from('machines')
-          .update({ status: 'en_uso', current_order_id: id, end_time: completionTime.toISOString(), total_minutes: parseInt(dryerTime) })
-          .eq('id', selectedDryer)
-      }
+      await supabase.from('machines')
+        .update({ status: 'en_uso', current_order_id: id, end_time: completionTime.toISOString(), total_minutes: parseInt(dryerTime) })
+        .eq('id', selectedDryer)
 
       await writeHistory('en_secado', `Secado iniciado. Secadora: ${selectedDryer}.`)
-      toast.success('Timer de secadora activado.')
-    } catch { toast.error('Error al iniciar secado') }
-    setSaving(false)
+      toast.success('✓ Secado iniciado.')
+
+      const { data: updProc } = await supabase.from('washing_process').select('*').eq('order_id', id).single()
+      if (updProc) setProcess(updProc)
+    } catch (e: any) { toast.error(`Error: ${e?.message ?? 'Error al iniciar secado'}`) }
+    finally { setSaving(false) }
   }
 
   /** Operator confirms drying is done. Frees dryer, moves to en_alistamiento. */
   const handleConfirmDryingEnd = async () => {
     setSaving(true)
     try {
-      await supabase
-        .from('washing_process')
-        .update({ drying_ended: new Date().toISOString(), secado_completed: true })
+      const { error: e1 } = await supabase.from('washing_process')
+        .update({ drying_ended: new Date().toISOString(), secado_completed: true, updated_at: new Date().toISOString() })
         .eq('order_id', id)
+      if (e1) { toast.error(`Error al guardar secado: ${e1.message}`); return }
 
       if (selectedDryer) {
-        await supabase
-          .from('machines')
+        await supabase.from('machines')
           .update({ status: 'disponible', current_order_id: null, end_time: null })
           .eq('id', selectedDryer)
       }
 
-      await supabase
-        .from('orders')
+      const { error: e2 } = await supabase.from('orders')
         .update({ status: 'en_alistamiento', updated_at: new Date().toISOString() })
         .eq('id', id)
+      if (e2) { toast.error(`Error al actualizar estado: ${e2.message}`); return }
 
       await writeHistory('en_alistamiento', 'Secado completado por operador. Secadora liberada.')
-
-      toast.success('Secado confirmado. Orden pasa a alistamiento.')
+      setCompletedSteps(prev => ({ ...prev, secado: true }))
+      toast.success('✓ Secado confirmado. Orden pasa a alistamiento.')
       const { data: newOrder } = await supabase.from('orders').select('*').eq('id', id).single()
       if (newOrder) setOrder(newOrder)
-    } catch { toast.error('Error al confirmar fin de secado') }
-    setSaving(false)
+    } catch (e: any) { toast.error(`Error: ${e?.message ?? 'Error al confirmar secado'}`) }
+    finally { setSaving(false) }
   }
 
   /** Cancels the active process: releases machine, deletes washing_process, resets order to recogido */
@@ -481,12 +473,15 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     setSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
+      let saveErr: any = null
+
       if (process) {
-        await supabase.from('washing_process')
+        const { error } = await supabase.from('washing_process')
           .update({ alistamiento_completed: true, updated_at: new Date().toISOString() })
           .eq('order_id', id)
+        saveErr = error
       } else {
-        const { data: newProc } = await supabase.from('washing_process').insert({
+        const { data: newProc, error } = await supabase.from('washing_process').insert({
           order_id: id,
           operator_id: user?.id,
           alistamiento_completed: true,
@@ -495,13 +490,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           planchado_completed: false,
           doblado_completed: false,
         }).select().single()
+        saveErr = error
         if (newProc) setProcess(newProc)
       }
+
+      if (saveErr) { toast.error(`Error al guardar alistamiento: ${saveErr.message}`); return }
+
       setCompletedSteps(prev => ({ ...prev, alistamiento: true }))
       await writeHistory(order.status, 'Alistamiento confirmado por operador.')
       toast.success('✓ Alistamiento confirmado')
-    } catch { toast.error('Error al confirmar alistamiento') }
-    setSaving(false)
+    } catch (e: any) { toast.error(`Error: ${e?.message ?? 'Error al confirmar alistamiento'}`) }
+    finally { setSaving(false) }
   }
 
   const handleStartLavado = async () => {
@@ -513,15 +512,17 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       const completionTime = new Date()
       completionTime.setMinutes(completionTime.getMinutes() + parseInt(machineTime))
 
+      let procErr: any = null
       if (process) {
-        await supabase.from('washing_process').update({
+        const { error } = await supabase.from('washing_process').update({
           washing_machine_id: selectedMachine,
           washing_started: new Date().toISOString(),
           notes: processNotes,
           updated_at: new Date().toISOString(),
         }).eq('order_id', id)
+        procErr = error
       } else {
-        const { data: newProc } = await supabase.from('washing_process').insert({
+        const { data: newProc, error } = await supabase.from('washing_process').insert({
           order_id: id,
           operator_id: user?.id,
           washing_machine_id: selectedMachine,
@@ -533,8 +534,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
           planchado_completed: false,
           doblado_completed: false,
         }).select().single()
+        procErr = error
         if (newProc) setProcess(newProc)
       }
+      if (procErr) { toast.error(`Error al guardar proceso: ${procErr.message}`); return }
 
       await supabase.from('machines').update({
         status: 'en_uso', current_order_id: id,
@@ -542,9 +545,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         total_minutes: parseInt(machineTime),
       }).eq('id', selectedMachine)
 
-      await supabase.from('orders')
+      const { error: orderErr } = await supabase.from('orders')
         .update({ status: 'en_lavado', updated_at: new Date().toISOString() })
         .eq('id', id)
+      if (orderErr) { toast.error(`Error al actualizar estado: ${orderErr.message}`); return }
 
       await writeHistory('en_lavado', `Lavado iniciado. Lavadora: ${selectedMachine}.`)
       toast.success('✓ Lavado iniciado')
@@ -553,39 +557,44 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
       if (newOrder) setOrder(newOrder)
       const { data: updProc } = await supabase.from('washing_process').select('*').eq('order_id', id).single()
       if (updProc) setProcess(updProc)
-    } catch { toast.error('Error al iniciar el lavado') }
-    setSaving(false)
+    } catch (e: any) { toast.error(`Error: ${e?.message ?? 'Error al iniciar lavado'}`) }
+    finally { setSaving(false) }
   }
 
   const handleFinishPlanchado = async () => {
     setSaving(true)
     try {
-      await supabase.from('washing_process')
+      const { error } = await supabase.from('washing_process')
         .update({ planchado_completed: true, updated_at: new Date().toISOString() })
         .eq('order_id', id)
+      if (error) { toast.error(`Error al guardar planchado: ${error.message}`); return }
       await writeHistory(order.status, 'Planchado completado por operador.')
       setCompletedSteps(prev => ({ ...prev, planchado: true }))
       toast.success('✓ Planchado confirmado')
-    } catch { toast.error('Error al confirmar planchado') }
-    setSaving(false)
+    } catch (e: any) { toast.error(`Error: ${e?.message ?? 'Error al confirmar planchado'}`) }
+    finally { setSaving(false) }
   }
 
   const handleFinishDoblado = async () => {
     setSaving(true)
     try {
-      await supabase.from('washing_process')
+      const { error: e1 } = await supabase.from('washing_process')
         .update({ doblado_completed: true, completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
         .eq('order_id', id)
-      await supabase.from('orders')
+      if (e1) { toast.error(`Error al guardar doblado: ${e1.message}`); return }
+
+      const { error: e2 } = await supabase.from('orders')
         .update({ status: 'listo', updated_at: new Date().toISOString() })
         .eq('id', id)
+      if (e2) { toast.error(`Error al actualizar estado: ${e2.message}`); return }
+
       await writeHistory('listo', 'Doblado completado. Orden lista para entrega.')
       setCompletedSteps(prev => ({ ...prev, doblado: true }))
       const { data: upd } = await supabase.from('orders').select('*').eq('id', id).single()
       if (upd) setOrder(upd)
       toast.success('✓ Doblado completado. ¡Orden lista para entrega!')
-    } catch { toast.error('Error al confirmar doblado') }
-    setSaving(false)
+    } catch (e: any) { toast.error(`Error: ${e?.message ?? 'Error al confirmar doblado'}`) }
+    finally { setSaving(false) }
   }
 
   const getStatusColor = (status: string) => {
