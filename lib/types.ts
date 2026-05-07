@@ -104,7 +104,9 @@ export interface WashingProcess {
   order_id: string;
   operator_id: string | null;
   washing_machine: string | null;
+  washing_machine_id: string | null;
   dryer: string | null;
+  dryer_id: string | null;
   status: WashingStatus;
   started_at: string | null;
   washing_started: string | null;
@@ -115,6 +117,12 @@ export interface WashingProcess {
   ironing_ended: string | null;
   completed_at: string | null;
   notes: string | null;
+  alistamiento_completed: boolean;
+  lavado_completed: boolean;
+  secado_completed: boolean;
+  planchado_completed: boolean;
+  doblado_completed: boolean;
+  updated_at: string | null;
   created_at: string;
 }
 
