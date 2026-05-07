@@ -47,8 +47,8 @@ const METHODS = [
   },
   {
     key: 'brevo' as const,
-    label: 'Brevo',
-    desc: 'Confirmar transferencia por Brevo',
+    label: 'Bre-v',
+    desc: 'Confirmar transferencia por Bre-v',
     icon: Smartphone,
     color: 'bg-pink-50 border-pink-200 text-pink-700 hover:bg-pink-100',
   },
@@ -241,7 +241,7 @@ export function PaymentButton({ orderId, orderAmount, buyerEmail, onPaid }: Prop
               {/* Nequi / Brevo — confirmation message */}
               {(method === 'nequi' || method === 'brevo') && (
                 <div className="rounded-lg bg-purple-50 border border-purple-100 p-3 text-sm text-purple-800">
-                  Confirma que ya recibiste el pago por {method === 'nequi' ? 'Nequi' : 'Brevo'} antes de registrarlo.
+                  Confirma que ya recibiste el pago por {method === 'nequi' ? 'Nequi' : 'Bre-v'} antes de registrarlo.
                 </div>
               )}
 
