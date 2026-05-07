@@ -43,6 +43,7 @@ import {
 } from 'lucide-react'
 import type { Order, OrderPreferences, WashingProcess } from '@/lib/types'
 import { MachineTimer } from '@/components/operador/machine-timer'
+import { PaymentButton } from '@/components/payment-button'
 
 // Fallback mock machines (used if 'machines' table doesn't exist)
 const MOCK_WASHERS = [
@@ -850,6 +851,23 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 </Button>
               </div>
             </CardContent>
+          </Card>
+
+          {/* Pago */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base">Pago</CardTitle>
+                  <CardDescription>Registra el cobro del servicio al cliente</CardDescription>
+                </div>
+                <PaymentButton
+                  orderId={id}
+                  orderAmount={order?.final_price ?? order?.estimated_price ?? null}
+                  onPaid={() => router.refresh()}
+                />
+              </div>
+            </CardHeader>
           </Card>
 
           {/* Process Control — Stepper */}

@@ -28,6 +28,7 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { STATUS_LABELS, type OrderStatus } from '@/lib/types'
 import { useRouter } from 'next/navigation'
+import { PaymentButton } from '@/components/payment-button'
 
 interface TaskCardProps {
   order: any 
@@ -312,6 +313,16 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                         <p className="text-xs text-green-700 font-medium">
                           Lista para entrega. Confirma cuando el cliente reciba su ropa.
                         </p>
+                      </div>
+
+                      {/* Pago */}
+                      <div className="flex items-center justify-between p-2 bg-muted/40 rounded-lg border">
+                        <span className="text-xs text-muted-foreground font-medium">Cobro al cliente</span>
+                        <PaymentButton
+                          orderId={order.id}
+                          orderAmount={order.final_price ?? order.estimated_price ?? null}
+                          onPaid={onUpdate}
+                        />
                       </div>
 
                       <AlertDialog>
