@@ -54,6 +54,7 @@ const DEFAULT_PREFERENCES: WashingPreferences = {
 export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: NuevaOrdenFormProps) {
   const PRICE_PER_KG = settings.price_per_kg
   const ADDITIONAL_PRICES = {
+    softener: settings.price_softener,
     bleach: settings.price_bleach,
     degreaser: settings.price_degreaser,
     stainTreatment: settings.price_stain_treatment,
@@ -260,7 +261,7 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
                   <Droplets className="h-5 w-5 text-primary" />
                   <div>
                     <Label className="text-sm font-medium">Suavizante</Label>
-                    <p className="text-xs text-muted-foreground">Deja la ropa suave y fresca</p>
+                    <p className="text-xs text-muted-foreground">Deja la ropa suave y fresca (+{formatCOP(ADDITIONAL_PRICES.softener)})</p>
                   </div>
                 </div>
                 <Switch

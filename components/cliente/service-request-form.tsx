@@ -54,6 +54,7 @@ const DEFAULT_PREFERENCES: WashingPreferences = {
 
 const PRICE_PER_KG = 8000
 const ADDITIONAL_PRICES = {
+  softener: 2000,
   bleach: 1500,
   degreaser: 2500,
   stainTreatment: 4000,
@@ -351,7 +352,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                     <Droplets className="h-5 w-5 text-primary" />
                     <div>
                       <Label className="text-sm font-medium">Aplicar suavizante</Label>
-                      <p className="text-xs text-muted-foreground">Deja tu ropa suave y fresca</p>
+                      <p className="text-xs text-muted-foreground">Deja tu ropa suave y fresca (+{formatCOP(ADDITIONAL_PRICES.softener)})</p>
                     </div>
                   </div>
                   <Switch checked={preferences.useSoftener} onCheckedChange={(c) => handlePreferenceChange('useSoftener', c)} />

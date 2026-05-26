@@ -20,21 +20,18 @@ interface Props {
 }
 
 type PriceKey = keyof Pick<AppSettings,
-  'price_per_kg' | 'min_price' | 'price_ironing' | 'price_softener' |
+  'price_per_kg' | 'min_price' | 'price_softener' |
   'price_bleach' | 'price_degreaser' | 'price_stain_treatment' |
-  'price_delicate_care' | 'price_special_folding' | 'price_express'>
+  'price_express'>
 
 const PRICE_FIELDS: { key: PriceKey; label: string; desc: string }[] = [
-  { key: 'price_per_kg',          label: 'Precio por kilogramo',     desc: 'Tarifa base del servicio' },
-  { key: 'min_price',             label: 'Precio mínimo de servicio', desc: 'Cobro mínimo por orden' },
-  { key: 'price_ironing',         label: 'Planchado',                 desc: 'Adicional por planchado' },
-  { key: 'price_softener',        label: 'Suavizante',                desc: 'Adicional por suavizante' },
-  { key: 'price_bleach',          label: 'Blanqueador',               desc: 'Adicional por blanqueador' },
-  { key: 'price_degreaser',       label: 'Desengrasante',             desc: 'Adicional por desengrasante' },
-  { key: 'price_stain_treatment', label: 'Tratamiento de manchas',    desc: 'Adicional por manchas difíciles' },
-  { key: 'price_delicate_care',   label: 'Cuidado delicado',          desc: 'Adicional por prendas especiales' },
-  { key: 'price_special_folding', label: 'Doblado especial',          desc: 'Adicional por doblado tipo boutique' },
-  { key: 'price_express',         label: 'Recargo express',           desc: 'Adicional por servicio urgente' },
+  { key: 'price_per_kg',          label: 'Precio por kilogramo',      desc: 'Tarifa base del servicio' },
+  { key: 'min_price',             label: 'Precio mínimo de servicio',  desc: 'Cobro mínimo por orden' },
+  { key: 'price_softener',        label: 'Suavizante',                 desc: 'Adicional por suavizante' },
+  { key: 'price_bleach',          label: 'Aplicar Oxígeno Activo',     desc: 'Adicional por Oxígeno Activo' },
+  { key: 'price_degreaser',       label: 'Desengrasante',              desc: 'Adicional por carga' },
+  { key: 'price_stain_treatment', label: 'Tratamiento de manchas',     desc: 'Adicional por mancha' },
+  { key: 'price_express',         label: 'Recargo express',            desc: 'Adicional por servicio urgente' },
 ]
 
 export function ConfiguracionClient({ settings, operadorProfile }: Props) {
@@ -42,13 +39,10 @@ export function ConfiguracionClient({ settings, operadorProfile }: Props) {
   const [prices, setPrices] = useState<Record<PriceKey, number>>({
     price_per_kg:          settings.price_per_kg,
     min_price:             settings.min_price,
-    price_ironing:         settings.price_ironing,
     price_softener:        settings.price_softener,
     price_bleach:          settings.price_bleach,
     price_degreaser:       settings.price_degreaser,
     price_stain_treatment: settings.price_stain_treatment,
-    price_delicate_care:   settings.price_delicate_care,
-    price_special_folding: settings.price_special_folding,
     price_express:         settings.price_express,
   })
 
