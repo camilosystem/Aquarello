@@ -53,6 +53,7 @@ const DEFAULT_PREFERENCES: WashingPreferences = {
 
 export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: NuevaOrdenFormProps) {
   const PRICE_PER_KG = settings.price_per_kg
+  const MIN_PRICE = settings.min_price
   const ADDITIONAL_PRICES = {
     softener: settings.price_softener,
     bleach: settings.price_bleach,
@@ -70,7 +71,8 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
   const [preferences, setPreferences] = useState<WashingPreferences>(DEFAULT_PREFERENCES)
 
   const estimatePrice = () => {
-    let total = PRICE_PER_KG * 5
+    let total = MIN_PRICE
+    if (preferences.useSoftener) total += ADDITIONAL_PRICES.softener
     if (preferences.useBleach) total += ADDITIONAL_PRICES.bleach
     if (preferences.useDegreaser) total += ADDITIONAL_PRICES.degreaser
     if (preferences.stainCount > 0) total += preferences.stainCount * ADDITIONAL_PRICES.stainTreatment
@@ -386,10 +388,20 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
                   </p>
                 )}
                 <div className="border-t pt-2 mt-2 space-y-1">
-                  <div className="flex justify-between">
-                    <span>Base (estimado 5 kg):</span>
-                    <span>{formatCOP(PRICE_PER_KG * 5)}</span>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Precio por kg:</span>
+                    <span>{formatCOP(PRICE_PER_KG)}</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span>Pedido mínimo (3 kg):</span>
+                    <span>{formatCOP(MIN_PRICE)}</span>
+                  </div>
+                  {preferences.useSoftener && (
+                    <div className="flex justify-between">
+                      <span>Suavizante:</span>
+                      <span>+{formatCOP(ADDITIONAL_PRICES.softener)}</span>
+                    </div>
+                  )}
                   {preferences.useBleach && (
                     <div className="flex justify-between">
                       <span>Oxígeno Activo:</span>

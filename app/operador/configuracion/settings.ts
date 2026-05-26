@@ -21,7 +21,7 @@ export type AppSettings = {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   price_per_kg: 8000,
-  min_price: 25000,
+  min_price: 28000,
   price_ironing: 5000,
   price_softener: 2000,
   price_bleach: 1500,
