@@ -46,6 +46,7 @@ export interface OrderPreferences {
   id: string;
   order_id: string;
   separate_whites: boolean;
+  separate_colors: boolean;
   use_softener: boolean;
   use_degreaser: boolean;
   use_bleach: boolean;
@@ -54,6 +55,7 @@ export interface OrderPreferences {
   special_folding: boolean;
   delicate_care: boolean;
   stain_treatment: boolean;
+  stain_count: number;
   notes: string | null;
   created_at: string;
 }
@@ -268,11 +270,7 @@ export const STATUS_COLORS: Record<OrderStatus, string> = {
 // Fragrance options
 export const FRAGRANCE_OPTIONS = [
   { value: 'ninguno', label: 'Sin fragancia' },
-  { value: 'lavanda', label: 'Lavanda' },
-  { value: 'floral', label: 'Floral' },
-  { value: 'fresco', label: 'Fresco' },
-  { value: 'suave', label: 'Suave' },
-  { value: 'intenso', label: 'Intenso' },
+  { value: 'lavva',   label: 'Aroma Lavva (notas frescas, limpias y serenas)' },
 ];
 
 // Format price in COP

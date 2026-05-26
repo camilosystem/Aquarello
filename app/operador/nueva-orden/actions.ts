@@ -20,14 +20,16 @@ type OrdenInput = {
   estimated_price: number
   preferences: {
     separate_whites: boolean
+    separate_colors: boolean
     use_softener: boolean
     use_degreaser: boolean
     use_bleach: boolean
     fragrance: string
+    stain_treatment: boolean
+    stain_count: number
     ironing_required: boolean
     special_folding: boolean
     delicate_care: boolean
-    stain_treatment: boolean
     notes: string | null
   }
 }

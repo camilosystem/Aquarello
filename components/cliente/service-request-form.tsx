@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { 
-  Shirt, Droplets, Sparkles, Wind, Palette, 
-  Timer, Star, AlertTriangle, Loader2, MapPin, MapPinned, Phone, X, CheckCircle2
+import {
+  Shirt, Droplets, Sparkles, Wind, Palette,
+  AlertTriangle, Loader2, MapPin, MapPinned, Phone, X, CheckCircle2, Minus, Plus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -23,7 +23,6 @@ import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { FRAGRANCE_OPTIONS, generateQRCode, formatCOP } from '@/lib/types'
 
-// Importamos el cargador y los componentes del mapa de Google
 import { useJsApiLoader, GoogleMap, Marker } from '@react-google-maps/api'
 
 interface ServiceRequestFormProps {
@@ -33,64 +32,54 @@ interface ServiceRequestFormProps {
 
 interface WashingPreferences {
   separateWhites: boolean
+  separateColors: boolean
   useSoftener: boolean
   useDegreaser: boolean
   useBleach: boolean
   fragrance: string
-  ironingRequired: boolean
-  specialFolding: boolean
-  delicateCare: boolean
-  stainTreatment: boolean
+  stainCount: number
   notes: string
 }
 
 const DEFAULT_PREFERENCES: WashingPreferences = {
   separateWhites: false,
+  separateColors: false,
   useSoftener: true,
   useDegreaser: false,
   useBleach: false,
-  fragrance: 'suave',
-  ironingRequired: false,
-  specialFolding: false,
-  delicateCare: false,
-  stainTreatment: false,
+  fragrance: 'ninguno',
+  stainCount: 0,
   notes: '',
 }
 
 const PRICE_PER_KG = 8000
 const ADDITIONAL_PRICES = {
-  ironing: 3000,
   bleach: 1500,
   degreaser: 2500,
   stainTreatment: 4000,
-  delicateCare: 2000,
-  specialFolding: 1000,
 }
 
-// Coordenadas por defecto (Bogotá) por si falla el GPS
 const DEFAULT_CENTER = { lat: 4.6097, lng: -74.0817 }
 
 export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormProps) {
   const router = useRouter()
   const supabase = createClient()
-  
-  // Cargamos la API de Google Maps
+
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '', 
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
   })
 
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
-  
+
   const [address, setAddress] = useState(userAddress || '')
   const [phone, setPhone] = useState('')
-  
-  // Estados para el Mapa Interactivo
+
   const [showMapModal, setShowMapModal] = useState(false)
   const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER)
   const [coordinates, setCoordinates] = useState<{lat: number, lng: number} | null>(null)
-  
+
   const [preferences, setPreferences] = useState<WashingPreferences>(DEFAULT_PREFERENCES)
 
   useEffect(() => {
@@ -106,9 +95,9 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
       toast.error('Error cargando Google Maps. Verifica tu API Key.')
       return
     }
-    
+
     setShowMapModal(true)
-    
+
     if (navigator.geolocation && !coordinates) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -125,7 +114,6 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
     }
   }
 
-  // Actualizar centro cuando se arrastra el pin
   const handleMarkerDragEnd = (e: google.maps.MapMouseEvent) => {
     if (e.latLng) {
       setMapCenter({ lat: e.latLng.lat(), lng: e.latLng.lng() })
@@ -140,16 +128,13 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
 
   const estimatePrice = () => {
     let total = PRICE_PER_KG * 5
-    if (preferences.ironingRequired) total += ADDITIONAL_PRICES.ironing
     if (preferences.useBleach) total += ADDITIONAL_PRICES.bleach
     if (preferences.useDegreaser) total += ADDITIONAL_PRICES.degreaser
-    if (preferences.stainTreatment) total += ADDITIONAL_PRICES.stainTreatment
-    if (preferences.delicateCare) total += ADDITIONAL_PRICES.delicateCare
-    if (preferences.specialFolding) total += ADDITIONAL_PRICES.specialFolding
+    if (preferences.stainCount > 0) total += preferences.stainCount * ADDITIONAL_PRICES.stainTreatment
     return total
   }
 
-  const handlePreferenceChange = (key: keyof WashingPreferences, value: boolean | string) => {
+  const handlePreferenceChange = (key: keyof WashingPreferences, value: boolean | string | number) => {
     setPreferences(prev => ({ ...prev, [key]: value }))
   }
 
@@ -169,7 +154,6 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
     setStep(2)
   }
 
-  // === AQUÍ ESTÁ EL CÓDIGO ACTUALIZADO ===
   const handleSubmit = async () => {
     if (!supabase) {
       toast.error('Error de conexión. Por favor recarga la página.')
@@ -182,15 +166,13 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
 
       const qrCode = generateQRCode()
       const estimatedPrice = estimatePrice()
-      
-      // GENERAMOS EL CÓDIGO DE 6 DÍGITOS PARA EL HANDSHAKE
       const receptionCode = Math.floor(100000 + Math.random() * 900000).toString()
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           qr_code: qrCode,
-          reception_code: receptionCode, // GUARDAMOS EL CÓDIGO
+          reception_code: receptionCode,
           user_id: userId,
           status: 'pendiente',
           pickup_address: address,
@@ -210,12 +192,13 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
         .insert({
           order_id: order.id,
           separate_whites: preferences.separateWhites,
+          separate_colors: preferences.separateColors,
           use_softener: preferences.useSoftener,
           use_degreaser: preferences.useDegreaser,
           use_bleach: preferences.useBleach,
           scent: preferences.fragrance,
-          iron_clothes: preferences.ironingRequired,
-          fold_type: preferences.specialFolding ? 'especial' : 'normal',
+          stain_treatment: preferences.stainCount > 0,
+          stain_count: preferences.stainCount,
           special_instructions: preferences.notes || null,
         })
 
@@ -241,11 +224,11 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
     <>
       <div className="space-y-4 pb-24">
         <div className="flex items-center justify-center gap-2">
-          <div className={`h-2 w-16 rounded-full transition-colors ${step >= 1 ? 'bg-primary' : 'bg-muted'}`} />
-          <div className={`h-2 w-16 rounded-full transition-colors ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
-          <div className={`h-2 w-16 rounded-full transition-colors ${step >= 3 ? 'bg-primary' : 'bg-muted'}`} />
+          <div className={`h-2 w-32 rounded-full transition-colors ${step >= 1 ? 'bg-primary' : 'bg-muted'}`} />
+          <div className={`h-2 w-32 rounded-full transition-colors ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
         </div>
 
+        {/* Paso 1 — Datos de recogida */}
         {step === 1 && (
           <Card>
             <CardHeader>
@@ -258,7 +241,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-              
+
               <div className="space-y-2">
                 <Label htmlFor="address">Dirección escrita *</Label>
                 <Textarea
@@ -284,9 +267,9 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                     </Button>
                   </div>
                 ) : (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
+                  <Button
+                    type="button"
+                    variant="outline"
                     className="w-full bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
                     onClick={handleOpenMap}
                     disabled={!isLoaded}
@@ -312,8 +295,8 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                 </div>
               </div>
 
-              <Button 
-                className="w-full mt-6" 
+              <Button
+                className="w-full mt-6"
                 onClick={handleContinueToStep2}
                 disabled={!address.trim() || !phone.trim() || !coordinates}
               >
@@ -323,7 +306,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
           </Card>
         )}
 
-        {/* --- PASO 2 --- */}
+        {/* Paso 2 — Preferencias de lavado */}
         {step === 2 && (
           <Card>
             <CardHeader>
@@ -337,16 +320,32 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4">
+
+                {/* Separar ropa blanca */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
                     <Shirt className="h-5 w-5 text-primary" />
                     <div>
                       <Label className="text-sm font-medium">Separar ropa blanca</Label>
-                      <p className="text-xs text-muted-foreground">Lavamos por separado tus prendas blancas</p>
+                      <p className="text-xs text-muted-foreground">Lavamos por separado tu ropa blanca, toallas y sabanas.</p>
                     </div>
                   </div>
                   <Switch checked={preferences.separateWhites} onCheckedChange={(c) => handlePreferenceChange('separateWhites', c)} />
                 </div>
+
+                {/* Separar ropa de color */}
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="flex items-center gap-3">
+                    <Shirt className="h-5 w-5 text-primary" />
+                    <div>
+                      <Label className="text-sm font-medium">Separar ropa de color</Label>
+                      <p className="text-xs text-muted-foreground">Separamos tus prendas: negras con jeans y ropa de color aparte.</p>
+                    </div>
+                  </div>
+                  <Switch checked={preferences.separateColors} onCheckedChange={(c) => handlePreferenceChange('separateColors', c)} />
+                </div>
+
+                {/* Suavizante */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
                     <Droplets className="h-5 w-5 text-primary" />
@@ -357,47 +356,71 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                   </div>
                   <Switch checked={preferences.useSoftener} onCheckedChange={(c) => handlePreferenceChange('useSoftener', c)} />
                 </div>
+
+                {/* Aplicar Oxígeno Activo */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
                     <Sparkles className="h-5 w-5 text-primary" />
                     <div>
-                      <Label className="text-sm font-medium">Aplicar blanqueador</Label>
-                      <p className="text-xs text-muted-foreground">Para ropa blanca más brillante (+{formatCOP(ADDITIONAL_PRICES.bleach)})</p>
+                      <Label className="text-sm font-medium">Aplicar Oxígeno Activo</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Intensifica y realza colores, ayuda a desmanchar y controla bacterias. (+{formatCOP(ADDITIONAL_PRICES.bleach)})
+                      </p>
                     </div>
                   </div>
                   <Switch checked={preferences.useBleach} onCheckedChange={(c) => handlePreferenceChange('useBleach', c)} />
                 </div>
+
+                {/* Desengrasante */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
                     <Wind className="h-5 w-5 text-primary" />
                     <div>
                       <Label className="text-sm font-medium">Aplicar desengrasante</Label>
-                      <p className="text-xs text-muted-foreground">Ideal para ropa de trabajo (+{formatCOP(ADDITIONAL_PRICES.degreaser)})</p>
+                      <p className="text-xs text-muted-foreground">Ideal para ropa de trabajo (+{formatCOP(ADDITIONAL_PRICES.degreaser)} por carga)</p>
                     </div>
                   </div>
                   <Switch checked={preferences.useDegreaser} onCheckedChange={(c) => handlePreferenceChange('useDegreaser', c)} />
                 </div>
+
+                {/* Tratamiento de manchas — contador */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="h-5 w-5 text-primary" />
                     <div>
                       <Label className="text-sm font-medium">Tratamiento de manchas</Label>
-                      <p className="text-xs text-muted-foreground">Atención especial a manchas difíciles (+{formatCOP(ADDITIONAL_PRICES.stainTreatment)})</p>
+                      <p className="text-xs text-muted-foreground">
+                        {preferences.stainCount > 0
+                          ? `${preferences.stainCount} mancha${preferences.stainCount > 1 ? 's' : ''} (+${formatCOP(preferences.stainCount * ADDITIONAL_PRICES.stainTreatment)})`
+                          : `+${formatCOP(ADDITIONAL_PRICES.stainTreatment)} por mancha`}
+                      </p>
                     </div>
                   </div>
-                  <Switch checked={preferences.stainTreatment} onCheckedChange={(c) => handlePreferenceChange('stainTreatment', c)} />
-                </div>
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="flex items-center gap-3">
-                    <Star className="h-5 w-5 text-primary" />
-                    <div>
-                      <Label className="text-sm font-medium">Cuidado delicado</Label>
-                      <p className="text-xs text-muted-foreground">Para prendas delicadas o especiales (+{formatCOP(ADDITIONAL_PRICES.delicateCare)})</p>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handlePreferenceChange('stainCount', Math.max(0, preferences.stainCount - 1))}
+                      disabled={preferences.stainCount === 0}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="w-6 text-center text-sm font-medium">{preferences.stainCount}</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handlePreferenceChange('stainCount', preferences.stainCount + 1)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Switch checked={preferences.delicateCare} onCheckedChange={(c) => handlePreferenceChange('delicateCare', c)} />
                 </div>
+
               </div>
+
+              {/* Fragancia */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Palette className="h-5 w-5 text-primary" />
@@ -412,71 +435,59 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Atrás</Button>
-                <Button className="flex-1" onClick={() => setStep(3)}>Continuar</Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
-        {/* --- PASO 3 --- */}
-        {step === 3 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Timer className="h-5 w-5 text-primary" />
-                Servicios Adicionales
-              </CardTitle>
-              <CardDescription>
-                Agrega servicios extra a tu pedido
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4">
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="flex items-center gap-3">
-                    <Shirt className="h-5 w-5 text-primary" />
-                    <div>
-                      <Label className="text-sm font-medium">Planchado</Label>
-                      <p className="text-xs text-muted-foreground">Tu ropa lista para usar (+{formatCOP(ADDITIONAL_PRICES.ironing)})</p>
-                    </div>
-                  </div>
-                  <Switch checked={preferences.ironingRequired} onCheckedChange={(c) => handlePreferenceChange('ironingRequired', c)} />
-                </div>
-                <div className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="flex items-center gap-3">
-                    <Star className="h-5 w-5 text-primary" />
-                    <div>
-                      <Label className="text-sm font-medium">Doblado especial</Label>
-                      <p className="text-xs text-muted-foreground">Doblado cuidadoso tipo boutique (+{formatCOP(ADDITIONAL_PRICES.specialFolding)})</p>
-                    </div>
-                  </div>
-                  <Switch checked={preferences.specialFolding} onCheckedChange={(c) => handlePreferenceChange('specialFolding', c)} />
-                </div>
-              </div>
+              {/* Instrucciones especiales */}
               <div className="space-y-2">
                 <Label htmlFor="notes">Instrucciones especiales (opcional)</Label>
-                <Textarea id="notes" placeholder="Ej: Hay una camisa con mancha de vino..." value={preferences.notes} onChange={(e) => handlePreferenceChange('notes', e.target.value)} rows={3} />
+                <Textarea
+                  id="notes"
+                  placeholder="Ej: Hay una camisa con mancha de vino..."
+                  value={preferences.notes}
+                  onChange={(e) => handlePreferenceChange('notes', e.target.value)}
+                  rows={3}
+                />
               </div>
+
+              {/* Resumen */}
               <div className="rounded-lg bg-muted/50 p-4 space-y-3">
                 <h4 className="font-semibold">Resumen del pedido</h4>
                 <div className="text-sm space-y-1">
                   <p className="text-muted-foreground"><span className="font-medium text-foreground">Dirección:</span> {address}</p>
                   <p className="text-muted-foreground"><span className="font-medium text-foreground">Teléfono:</span> {phone}</p>
-                  <div className="flex justify-between mt-2"><span>Base (estimado 5kg):</span><span>{formatCOP(PRICE_PER_KG * 5)}</span></div>
-                  {preferences.ironingRequired && <div className="flex justify-between"><span>Planchado:</span><span>+{formatCOP(ADDITIONAL_PRICES.ironing)}</span></div>}
-                  {preferences.useBleach && <div className="flex justify-between"><span>Blanqueador:</span><span>+{formatCOP(ADDITIONAL_PRICES.bleach)}</span></div>}
-                  {preferences.useDegreaser && <div className="flex justify-between"><span>Desengrasante:</span><span>+{formatCOP(ADDITIONAL_PRICES.degreaser)}</span></div>}
-                  {preferences.stainTreatment && <div className="flex justify-between"><span>Tratamiento manchas:</span><span>+{formatCOP(ADDITIONAL_PRICES.stainTreatment)}</span></div>}
-                  {preferences.delicateCare && <div className="flex justify-between"><span>Cuidado delicado:</span><span>+{formatCOP(ADDITIONAL_PRICES.delicateCare)}</span></div>}
-                  {preferences.specialFolding && <div className="flex justify-between"><span>Doblado especial:</span><span>+{formatCOP(ADDITIONAL_PRICES.specialFolding)}</span></div>}
-                  <div className="border-t pt-2 mt-2 flex justify-between font-semibold"><span>Total estimado:</span><span className="text-primary">{formatCOP(estimatePrice())}</span></div>
+                  <div className="border-t pt-2 mt-2 space-y-1">
+                    <div className="flex justify-between">
+                      <span>Base (estimado 5 kg):</span>
+                      <span>{formatCOP(PRICE_PER_KG * 5)}</span>
+                    </div>
+                    {preferences.useBleach && (
+                      <div className="flex justify-between">
+                        <span>Oxígeno Activo:</span>
+                        <span>+{formatCOP(ADDITIONAL_PRICES.bleach)}</span>
+                      </div>
+                    )}
+                    {preferences.useDegreaser && (
+                      <div className="flex justify-between">
+                        <span>Desengrasante:</span>
+                        <span>+{formatCOP(ADDITIONAL_PRICES.degreaser)}</span>
+                      </div>
+                    )}
+                    {preferences.stainCount > 0 && (
+                      <div className="flex justify-between">
+                        <span>Manchas ({preferences.stainCount}):</span>
+                        <span>+{formatCOP(preferences.stainCount * ADDITIONAL_PRICES.stainTreatment)}</span>
+                      </div>
+                    )}
+                    <div className="border-t pt-2 flex justify-between font-semibold">
+                      <span>Total estimado:</span>
+                      <span className="text-primary">{formatCOP(estimatePrice())}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">* El precio final se calculará al pesar tu ropa</p>
                 </div>
-                <p className="text-xs text-muted-foreground">* El precio final se calculará al pesar tu ropa</p>
               </div>
+
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>Atrás</Button>
+                <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Atrás</Button>
                 <Button className="flex-1" onClick={handleSubmit} disabled={loading}>
                   {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Procesando...</> : 'Solicitar Servicio'}
                 </Button>
@@ -486,7 +497,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
         )}
       </div>
 
-      {/* --- MODAL DEL MAPA --- */}
+      {/* Modal del mapa */}
       {showMapModal && isLoaded && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="bg-background w-full max-w-lg rounded-xl shadow-2xl overflow-hidden flex flex-col h-[70vh]">
@@ -499,7 +510,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                 <X className="h-5 w-5" />
               </Button>
             </div>
-            
+
             <div className="flex-1 relative bg-muted">
               <GoogleMap
                 mapContainerStyle={{ width: '100%', height: '100%' }}
@@ -508,17 +519,17 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                 options={{
                   disableDefaultUI: true,
                   zoomControl: true,
-                  gestureHandling: "greedy" // Mover con 1 dedo en celular
+                  gestureHandling: "greedy"
                 }}
               >
-                <Marker 
-                  position={mapCenter} 
+                <Marker
+                  position={mapCenter}
                   draggable={true}
                   onDragEnd={handleMarkerDragEnd}
                 />
               </GoogleMap>
             </div>
-            
+
             <div className="p-4 bg-card border-t">
               <Button className="w-full text-md py-6" onClick={handleConfirmLocation}>
                 <MapPinned className="mr-2 h-5 w-5" />

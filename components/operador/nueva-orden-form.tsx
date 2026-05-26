@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Shirt, Droplets, Sparkles, Wind, Palette,
-  Timer, Star, AlertTriangle, Loader2, MapPin, User, Phone
+  AlertTriangle, Loader2, MapPin, User, Phone, Minus, Plus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,39 +31,32 @@ interface NuevaOrdenFormProps {
 
 interface WashingPreferences {
   separateWhites: boolean
+  separateColors: boolean
   useSoftener: boolean
   useDegreaser: boolean
   useBleach: boolean
   fragrance: string
-  ironingRequired: boolean
-  specialFolding: boolean
-  delicateCare: boolean
-  stainTreatment: boolean
+  stainCount: number
   notes: string
 }
 
 const DEFAULT_PREFERENCES: WashingPreferences = {
   separateWhites: false,
+  separateColors: false,
   useSoftener: true,
   useDegreaser: false,
   useBleach: false,
-  fragrance: 'suave',
-  ironingRequired: false,
-  specialFolding: false,
-  delicateCare: false,
-  stainTreatment: false,
+  fragrance: 'ninguno',
+  stainCount: 0,
   notes: '',
 }
 
 export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: NuevaOrdenFormProps) {
   const PRICE_PER_KG = settings.price_per_kg
   const ADDITIONAL_PRICES = {
-    ironing: settings.price_ironing,
     bleach: settings.price_bleach,
     degreaser: settings.price_degreaser,
     stainTreatment: settings.price_stain_treatment,
-    delicateCare: settings.price_delicate_care,
-    specialFolding: settings.price_special_folding,
   }
   const router = useRouter()
 
@@ -77,16 +70,13 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
 
   const estimatePrice = () => {
     let total = PRICE_PER_KG * 5
-    if (preferences.ironingRequired) total += ADDITIONAL_PRICES.ironing
     if (preferences.useBleach) total += ADDITIONAL_PRICES.bleach
     if (preferences.useDegreaser) total += ADDITIONAL_PRICES.degreaser
-    if (preferences.stainTreatment) total += ADDITIONAL_PRICES.stainTreatment
-    if (preferences.delicateCare) total += ADDITIONAL_PRICES.delicateCare
-    if (preferences.specialFolding) total += ADDITIONAL_PRICES.specialFolding
+    if (preferences.stainCount > 0) total += preferences.stainCount * ADDITIONAL_PRICES.stainTreatment
     return total
   }
 
-  const handlePreferenceChange = (key: keyof WashingPreferences, value: boolean | string) => {
+  const handlePreferenceChange = (key: keyof WashingPreferences, value: boolean | string | number) => {
     setPreferences(prev => ({ ...prev, [key]: value }))
   }
 
@@ -115,14 +105,16 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
         estimated_price: estimatePrice(),
         preferences: {
           separate_whites: preferences.separateWhites,
+          separate_colors: preferences.separateColors,
           use_softener: preferences.useSoftener,
           use_degreaser: preferences.useDegreaser,
           use_bleach: preferences.useBleach,
           fragrance: preferences.fragrance,
-          ironing_required: preferences.ironingRequired,
-          special_folding: preferences.specialFolding,
-          delicate_care: preferences.delicateCare,
-          stain_treatment: preferences.stainTreatment,
+          stain_treatment: preferences.stainCount > 0,
+          stain_count: preferences.stainCount,
+          ironing_required: false,
+          special_folding: false,
+          delicate_care: false,
           notes: preferences.notes || null,
         },
       })
@@ -146,9 +138,8 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
     <div className="space-y-4 max-w-lg mx-auto pb-12">
       {/* Progress bar */}
       <div className="flex items-center justify-center gap-2">
-        <div className={`h-2 w-24 rounded-full transition-colors ${step >= 1 ? 'bg-primary' : 'bg-muted'}`} />
-        <div className={`h-2 w-24 rounded-full transition-colors ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
-        <div className={`h-2 w-24 rounded-full transition-colors ${step >= 3 ? 'bg-primary' : 'bg-muted'}`} />
+        <div className={`h-2 w-32 rounded-full transition-colors ${step >= 1 ? 'bg-primary' : 'bg-muted'}`} />
+        <div className={`h-2 w-32 rounded-full transition-colors ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
       </div>
 
       {/* Paso 1 — Datos del cliente */}
@@ -232,32 +223,122 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-4">
-              {[
-                { key: 'separateWhites', icon: Shirt, label: 'Separar ropa blanca', desc: 'Lavado por separado', price: null },
-                { key: 'useSoftener', icon: Droplets, label: 'Suavizante', desc: 'Deja la ropa suave y fresca', price: null },
-                { key: 'useBleach', icon: Sparkles, label: 'Blanqueador', desc: `Ropa blanca más brillante`, price: ADDITIONAL_PRICES.bleach },
-                { key: 'useDegreaser', icon: Wind, label: 'Desengrasante', desc: 'Ideal para ropa de trabajo', price: ADDITIONAL_PRICES.degreaser },
-                { key: 'stainTreatment', icon: AlertTriangle, label: 'Tratamiento de manchas', desc: 'Atención a manchas difíciles', price: ADDITIONAL_PRICES.stainTreatment },
-                { key: 'delicateCare', icon: Star, label: 'Cuidado delicado', desc: 'Para prendas especiales', price: ADDITIONAL_PRICES.delicateCare },
-              ].map(({ key, icon: Icon, label, desc, price }) => (
-                <div key={key} className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="flex items-center gap-3">
-                    <Icon className="h-5 w-5 text-primary" />
-                    <div>
-                      <Label className="text-sm font-medium">{label}</Label>
-                      <p className="text-xs text-muted-foreground">
-                        {desc}{price ? ` (+${formatCOP(price)})` : ''}
-                      </p>
-                    </div>
+
+              {/* Separar ropa blanca */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <Shirt className="h-5 w-5 text-primary" />
+                  <div>
+                    <Label className="text-sm font-medium">Separar ropa blanca</Label>
+                    <p className="text-xs text-muted-foreground">Lavamos por separado tu ropa blanca, toallas y sabanas.</p>
                   </div>
-                  <Switch
-                    checked={preferences[key as keyof WashingPreferences] as boolean}
-                    onCheckedChange={(c) => handlePreferenceChange(key as keyof WashingPreferences, c)}
-                  />
                 </div>
-              ))}
+                <Switch
+                  checked={preferences.separateWhites}
+                  onCheckedChange={(c) => handlePreferenceChange('separateWhites', c)}
+                />
+              </div>
+
+              {/* Separar ropa de color */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <Shirt className="h-5 w-5 text-primary" />
+                  <div>
+                    <Label className="text-sm font-medium">Separar ropa de color</Label>
+                    <p className="text-xs text-muted-foreground">Separamos tus prendas: negras con jeans y ropa de color aparte.</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={preferences.separateColors}
+                  onCheckedChange={(c) => handlePreferenceChange('separateColors', c)}
+                />
+              </div>
+
+              {/* Suavizante */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <Droplets className="h-5 w-5 text-primary" />
+                  <div>
+                    <Label className="text-sm font-medium">Suavizante</Label>
+                    <p className="text-xs text-muted-foreground">Deja la ropa suave y fresca</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={preferences.useSoftener}
+                  onCheckedChange={(c) => handlePreferenceChange('useSoftener', c)}
+                />
+              </div>
+
+              {/* Aplicar Oxígeno Activo */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <div>
+                    <Label className="text-sm font-medium">Aplicar Oxígeno Activo</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Intensifica y realza colores, ayuda a desmanchar y controla bacterias. (+{formatCOP(ADDITIONAL_PRICES.bleach)})
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  checked={preferences.useBleach}
+                  onCheckedChange={(c) => handlePreferenceChange('useBleach', c)}
+                />
+              </div>
+
+              {/* Desengrasante */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <Wind className="h-5 w-5 text-primary" />
+                  <div>
+                    <Label className="text-sm font-medium">Aplicar desengrasante</Label>
+                    <p className="text-xs text-muted-foreground">Ideal para ropa de trabajo (+{formatCOP(ADDITIONAL_PRICES.degreaser)} por carga)</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={preferences.useDegreaser}
+                  onCheckedChange={(c) => handlePreferenceChange('useDegreaser', c)}
+                />
+              </div>
+
+              {/* Tratamiento de manchas — contador */}
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-primary" />
+                  <div>
+                    <Label className="text-sm font-medium">Tratamiento de manchas</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {preferences.stainCount > 0
+                        ? `${preferences.stainCount} mancha${preferences.stainCount > 1 ? 's' : ''} (+${formatCOP(preferences.stainCount * ADDITIONAL_PRICES.stainTreatment)})`
+                        : `+${formatCOP(ADDITIONAL_PRICES.stainTreatment)} por mancha`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handlePreferenceChange('stainCount', Math.max(0, preferences.stainCount - 1))}
+                    disabled={preferences.stainCount === 0}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-6 text-center text-sm font-medium">{preferences.stainCount}</span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => handlePreferenceChange('stainCount', preferences.stainCount + 1)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
             </div>
 
+            {/* Fragancia */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Palette className="h-5 w-5 text-primary" />
@@ -276,54 +357,7 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
               </Select>
             </div>
 
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Atrás</Button>
-              <Button className="flex-1" onClick={() => setStep(3)}>Continuar</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Paso 3 — Servicios adicionales + resumen */}
-      {step === 3 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Timer className="h-5 w-5 text-primary" />
-              Servicios Adicionales
-            </CardTitle>
-            <CardDescription>Agrega planchado o doblado especial</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid gap-4">
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="flex items-center gap-3">
-                  <Shirt className="h-5 w-5 text-primary" />
-                  <div>
-                    <Label className="text-sm font-medium">Planchado</Label>
-                    <p className="text-xs text-muted-foreground">Ropa lista para usar (+{formatCOP(ADDITIONAL_PRICES.ironing)})</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={preferences.ironingRequired}
-                  onCheckedChange={(c) => handlePreferenceChange('ironingRequired', c)}
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div className="flex items-center gap-3">
-                  <Star className="h-5 w-5 text-primary" />
-                  <div>
-                    <Label className="text-sm font-medium">Doblado especial</Label>
-                    <p className="text-xs text-muted-foreground">Tipo boutique (+{formatCOP(ADDITIONAL_PRICES.specialFolding)})</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={preferences.specialFolding}
-                  onCheckedChange={(c) => handlePreferenceChange('specialFolding', c)}
-                />
-              </div>
-            </div>
-
+            {/* Instrucciones especiales */}
             <div className="space-y-2">
               <Label htmlFor="notes">Instrucciones especiales (opcional)</Label>
               <Textarea
@@ -355,12 +389,24 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
                     <span>Base (estimado 5 kg):</span>
                     <span>{formatCOP(PRICE_PER_KG * 5)}</span>
                   </div>
-                  {preferences.ironingRequired && <div className="flex justify-between"><span>Planchado:</span><span>+{formatCOP(ADDITIONAL_PRICES.ironing)}</span></div>}
-                  {preferences.useBleach && <div className="flex justify-between"><span>Blanqueador:</span><span>+{formatCOP(ADDITIONAL_PRICES.bleach)}</span></div>}
-                  {preferences.useDegreaser && <div className="flex justify-between"><span>Desengrasante:</span><span>+{formatCOP(ADDITIONAL_PRICES.degreaser)}</span></div>}
-                  {preferences.stainTreatment && <div className="flex justify-between"><span>Manchas:</span><span>+{formatCOP(ADDITIONAL_PRICES.stainTreatment)}</span></div>}
-                  {preferences.delicateCare && <div className="flex justify-between"><span>Cuidado delicado:</span><span>+{formatCOP(ADDITIONAL_PRICES.delicateCare)}</span></div>}
-                  {preferences.specialFolding && <div className="flex justify-between"><span>Doblado especial:</span><span>+{formatCOP(ADDITIONAL_PRICES.specialFolding)}</span></div>}
+                  {preferences.useBleach && (
+                    <div className="flex justify-between">
+                      <span>Oxígeno Activo:</span>
+                      <span>+{formatCOP(ADDITIONAL_PRICES.bleach)}</span>
+                    </div>
+                  )}
+                  {preferences.useDegreaser && (
+                    <div className="flex justify-between">
+                      <span>Desengrasante:</span>
+                      <span>+{formatCOP(ADDITIONAL_PRICES.degreaser)}</span>
+                    </div>
+                  )}
+                  {preferences.stainCount > 0 && (
+                    <div className="flex justify-between">
+                      <span>Manchas ({preferences.stainCount}):</span>
+                      <span>+{formatCOP(preferences.stainCount * ADDITIONAL_PRICES.stainTreatment)}</span>
+                    </div>
+                  )}
                   <div className="border-t pt-2 flex justify-between font-semibold">
                     <span>Total estimado:</span>
                     <span className="text-primary">{formatCOP(estimatePrice())}</span>
@@ -371,7 +417,7 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>Atrás</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Atrás</Button>
               <Button className="flex-1" onClick={handleSubmit} disabled={loading}>
                 {loading
                   ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creando...</>
