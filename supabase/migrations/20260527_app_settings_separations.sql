@@ -1,0 +1,3 @@
+ALTER TABLE public.app_settings
+  ADD COLUMN IF NOT EXISTS price_separate_whites INTEGER NOT NULL DEFAULT 3000,
+  ADD COLUMN IF NOT EXISTS price_separate_colors INTEGER NOT NULL DEFAULT 3000;

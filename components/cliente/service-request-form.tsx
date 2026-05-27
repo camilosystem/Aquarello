@@ -55,6 +55,8 @@ const DEFAULT_PREFERENCES: WashingPreferences = {
 const PRICE_PER_KG = 8000
 const MIN_PRICE = 28000
 const ADDITIONAL_PRICES = {
+  separateWhites: 3000,
+  separateColors: 3000,
   softener: 2000,
   bleach: 1500,
   degreaser: 2500,
@@ -130,6 +132,8 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
 
   const estimatePrice = () => {
     let total = MIN_PRICE
+    if (preferences.separateWhites) total += ADDITIONAL_PRICES.separateWhites
+    if (preferences.separateColors) total += ADDITIONAL_PRICES.separateColors
     if (preferences.useSoftener) total += ADDITIONAL_PRICES.softener
     if (preferences.useBleach) total += ADDITIONAL_PRICES.bleach
     if (preferences.useDegreaser) total += ADDITIONAL_PRICES.degreaser
@@ -330,7 +334,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                     <Shirt className="h-5 w-5 text-primary" />
                     <div>
                       <Label className="text-sm font-medium">Separar ropa blanca</Label>
-                      <p className="text-xs text-muted-foreground">Lavamos por separado tu ropa blanca, toallas y sabanas.</p>
+                      <p className="text-xs text-muted-foreground">Lavamos por separado tu ropa blanca, toallas y sabanas. (+{formatCOP(ADDITIONAL_PRICES.separateWhites)})</p>
                     </div>
                   </div>
                   <Switch checked={preferences.separateWhites} onCheckedChange={(c) => handlePreferenceChange('separateWhites', c)} />
@@ -342,7 +346,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                     <Shirt className="h-5 w-5 text-primary" />
                     <div>
                       <Label className="text-sm font-medium">Separar ropa de color</Label>
-                      <p className="text-xs text-muted-foreground">Separamos tus prendas: negras con jeans y ropa de color aparte.</p>
+                      <p className="text-xs text-muted-foreground">Separamos tus prendas: negras con jeans y ropa de color aparte. (+{formatCOP(ADDITIONAL_PRICES.separateColors)})</p>
                     </div>
                   </div>
                   <Switch checked={preferences.separateColors} onCheckedChange={(c) => handlePreferenceChange('separateColors', c)} />
@@ -466,6 +470,18 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                       <span>Pedido mínimo (3 kg):</span>
                       <span>{formatCOP(MIN_PRICE)}</span>
                     </div>
+                    {preferences.separateWhites && (
+                      <div className="flex justify-between">
+                        <span>Separar ropa blanca:</span>
+                        <span>+{formatCOP(ADDITIONAL_PRICES.separateWhites)}</span>
+                      </div>
+                    )}
+                    {preferences.separateColors && (
+                      <div className="flex justify-between">
+                        <span>Separar ropa de color:</span>
+                        <span>+{formatCOP(ADDITIONAL_PRICES.separateColors)}</span>
+                      </div>
+                    )}
                     {preferences.useSoftener && (
                       <div className="flex justify-between">
                         <span>Suavizante:</span>

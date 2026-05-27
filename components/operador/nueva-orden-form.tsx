@@ -55,6 +55,8 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
   const PRICE_PER_KG = settings.price_per_kg
   const MIN_PRICE = settings.min_price
   const ADDITIONAL_PRICES = {
+    separateWhites: settings.price_separate_whites,
+    separateColors: settings.price_separate_colors,
     softener: settings.price_softener,
     bleach: settings.price_bleach,
     degreaser: settings.price_degreaser,
@@ -72,6 +74,8 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
 
   const estimatePrice = () => {
     let total = MIN_PRICE
+    if (preferences.separateWhites) total += ADDITIONAL_PRICES.separateWhites
+    if (preferences.separateColors) total += ADDITIONAL_PRICES.separateColors
     if (preferences.useSoftener) total += ADDITIONAL_PRICES.softener
     if (preferences.useBleach) total += ADDITIONAL_PRICES.bleach
     if (preferences.useDegreaser) total += ADDITIONAL_PRICES.degreaser
@@ -233,7 +237,7 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
                   <Shirt className="h-5 w-5 text-primary" />
                   <div>
                     <Label className="text-sm font-medium">Separar ropa blanca</Label>
-                    <p className="text-xs text-muted-foreground">Lavamos por separado tu ropa blanca, toallas y sabanas.</p>
+                    <p className="text-xs text-muted-foreground">Lavamos por separado tu ropa blanca, toallas y sabanas. (+{formatCOP(ADDITIONAL_PRICES.separateWhites)})</p>
                   </div>
                 </div>
                 <Switch
@@ -248,7 +252,7 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
                   <Shirt className="h-5 w-5 text-primary" />
                   <div>
                     <Label className="text-sm font-medium">Separar ropa de color</Label>
-                    <p className="text-xs text-muted-foreground">Separamos tus prendas: negras con jeans y ropa de color aparte.</p>
+                    <p className="text-xs text-muted-foreground">Separamos tus prendas: negras con jeans y ropa de color aparte. (+{formatCOP(ADDITIONAL_PRICES.separateColors)})</p>
                   </div>
                 </div>
                 <Switch
@@ -396,6 +400,18 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
                     <span>Pedido mínimo (3 kg):</span>
                     <span>{formatCOP(MIN_PRICE)}</span>
                   </div>
+                  {preferences.separateWhites && (
+                    <div className="flex justify-between">
+                      <span>Separar ropa blanca:</span>
+                      <span>+{formatCOP(ADDITIONAL_PRICES.separateWhites)}</span>
+                    </div>
+                  )}
+                  {preferences.separateColors && (
+                    <div className="flex justify-between">
+                      <span>Separar ropa de color:</span>
+                      <span>+{formatCOP(ADDITIONAL_PRICES.separateColors)}</span>
+                    </div>
+                  )}
                   {preferences.useSoftener && (
                     <div className="flex justify-between">
                       <span>Suavizante:</span>

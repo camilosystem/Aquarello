@@ -11,6 +11,8 @@ export type AppSettings = {
   price_delicate_care: number
   price_special_folding: number
   price_express: number
+  price_separate_whites: number
+  price_separate_colors: number
   opening_time: string
   closing_time: string
   avg_wash_minutes: number
@@ -30,6 +32,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   price_delicate_care: 2000,
   price_special_folding: 1000,
   price_express: 10000,
+  price_separate_whites: 3000,
+  price_separate_colors: 3000,
   opening_time: '07:00',
   closing_time: '20:00',
   avg_wash_minutes: 120,

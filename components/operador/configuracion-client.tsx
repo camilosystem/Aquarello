@@ -20,13 +20,15 @@ interface Props {
 }
 
 type PriceKey = keyof Pick<AppSettings,
-  'price_per_kg' | 'min_price' | 'price_softener' |
-  'price_bleach' | 'price_degreaser' | 'price_stain_treatment' |
+  'price_per_kg' | 'min_price' | 'price_separate_whites' | 'price_separate_colors' |
+  'price_softener' | 'price_bleach' | 'price_degreaser' | 'price_stain_treatment' |
   'price_express'>
 
 const PRICE_FIELDS: { key: PriceKey; label: string; desc: string }[] = [
   { key: 'price_per_kg',          label: 'Precio por kilogramo',      desc: 'Tarifa base del servicio' },
   { key: 'min_price',             label: 'Precio mínimo de servicio',  desc: 'Cobro mínimo por orden' },
+  { key: 'price_separate_whites', label: 'Separar ropa blanca',        desc: 'Adicional por separación de blancos' },
+  { key: 'price_separate_colors', label: 'Separar ropa de color',      desc: 'Adicional por separación de colores' },
   { key: 'price_softener',        label: 'Suavizante',                 desc: 'Adicional por suavizante' },
   { key: 'price_bleach',          label: 'Aplicar Oxígeno Activo',     desc: 'Adicional por Oxígeno Activo' },
   { key: 'price_degreaser',       label: 'Desengrasante',              desc: 'Adicional por carga' },
@@ -37,13 +39,15 @@ const PRICE_FIELDS: { key: PriceKey; label: string; desc: string }[] = [
 export function ConfiguracionClient({ settings, operadorProfile }: Props) {
   // ─── Prices ──────────────────────────────────────────────────────────────
   const [prices, setPrices] = useState<Record<PriceKey, number>>({
-    price_per_kg:          settings.price_per_kg,
-    min_price:             settings.min_price,
-    price_softener:        settings.price_softener,
-    price_bleach:          settings.price_bleach,
-    price_degreaser:       settings.price_degreaser,
-    price_stain_treatment: settings.price_stain_treatment,
-    price_express:         settings.price_express,
+    price_per_kg:           settings.price_per_kg,
+    min_price:              settings.min_price,
+    price_separate_whites:  settings.price_separate_whites,
+    price_separate_colors:  settings.price_separate_colors,
+    price_softener:         settings.price_softener,
+    price_bleach:           settings.price_bleach,
+    price_degreaser:        settings.price_degreaser,
+    price_stain_treatment:  settings.price_stain_treatment,
+    price_express:          settings.price_express,
   })
 
   // ─── Schedule ─────────────────────────────────────────────────────────────
