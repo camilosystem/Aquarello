@@ -272,11 +272,16 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
         .from('orders')
         .update({ weight_kg: parsed, updated_at: new Date().toISOString() })
         .eq('id', id)
-      if (error) throw error
+      if (error) {
+        console.error('Error actualizando peso:', error)
+        toast.error(`Error: ${error.message}`)
+        return
+      }
       setOrder((prev: any) => ({ ...prev, weight_kg: parsed }))
       toast.success('Peso actualizado')
-    } catch {
-      toast.error('Error al actualizar el peso')
+    } catch (e) {
+      console.error('Error inesperado peso:', e)
+      toast.error('Error inesperado al actualizar el peso')
     }
     setSavingWeight(false)
   }
