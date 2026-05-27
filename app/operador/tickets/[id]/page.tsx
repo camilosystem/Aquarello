@@ -270,10 +270,10 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     try {
       const { error } = await supabase
         .from('orders')
-        .update({ weight_kg: parsed, actual_weight: parsed, updated_at: new Date().toISOString() })
+        .update({ weight_kg: parsed, updated_at: new Date().toISOString() })
         .eq('id', id)
       if (error) throw error
-      setOrder((prev: any) => ({ ...prev, weight_kg: parsed, actual_weight: parsed }))
+      setOrder((prev: any) => ({ ...prev, weight_kg: parsed }))
       toast.success('Peso actualizado')
     } catch {
       toast.error('Error al actualizar el peso')
