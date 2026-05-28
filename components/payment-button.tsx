@@ -33,7 +33,7 @@ const METHODS = [
   },
   {
     key: 'payu' as const,
-    label: 'Tarjeta / PayU',
+    label: 'Tarjeta / Wompi',
     desc: 'Pago online con tarjeta débito o crédito',
     icon: CreditCard,
     color: 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100',

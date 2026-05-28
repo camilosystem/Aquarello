@@ -21,6 +21,7 @@ export default function ClienteRegistroPage() {
     fullName: '',
     email: '',
     phone: '',
+    city: '',
     address: '',
     password: '',
     confirmPassword: '',
@@ -56,6 +57,7 @@ export default function ClienteRegistroPage() {
           data: {
             full_name: formData.fullName,
             phone: formData.phone,
+            city: formData.city,
             address: formData.address,
             role: 'cliente',
           },
@@ -152,11 +154,23 @@ export default function ClienteRegistroPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="city">Ciudad</Label>
+                <Input
+                  id="city"
+                  type="text"
+                  placeholder="Bogotá"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  autoComplete="address-level2"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="address">Dirección</Label>
                 <Input
                   id="address"
                   type="text"
-                  placeholder="Calle 100 #15-20, Bogotá"
+                  placeholder="Calle 100 #15-20"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   required
