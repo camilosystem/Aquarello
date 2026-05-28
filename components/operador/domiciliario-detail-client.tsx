@@ -116,11 +116,24 @@ export function DomiciliarioDetailClient({ domiciliario, orders }: DomiciliarioD
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Mail className="h-3 w-3" /> Email (no editable)
-              </Label>
-              <p className="text-sm font-medium bg-muted px-3 py-2 rounded-md">{domiciliario.email}</p>
+            <div className="rounded-lg border border-dashed p-3 space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <Mail className="h-3 w-3" /> Credenciales de ingreso a la app
+              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold break-all">{domiciliario.email}</p>
+                <button
+                  type="button"
+                  className="shrink-0 text-xs text-primary hover:underline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(domiciliario.email ?? '')
+                    toast.success('Email copiado')
+                  }}
+                >
+                  Copiar
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">El domiciliario usa este email + su contraseña para ingresar.</p>
             </div>
 
             <div className="space-y-2">
