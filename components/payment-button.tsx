@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
-import { CreditCard, Banknote, Smartphone, CheckCircle2, Loader2, ExternalLink } from 'lucide-react'
+import { CreditCard, Banknote, Smartphone, CheckCircle2, Loader2, ExternalLink, AlertCircle } from 'lucide-react'
 import { registerManualPaymentAction, createPayUCheckoutAction, type ManualPaymentMethod, type PayUParams } from '@/app/operador/tickets/payment-actions'
 import { formatCOP } from '@/lib/types'
 
@@ -79,32 +79,43 @@ export function PaymentButton({ orderId, orderAmount, buyerEmail, onPaid }: Prop
   const [amount, setAmount] = useState(String(orderAmount ?? ''))
   const [notes, setNotes] = useState('')
   const [email, setEmail] = useState(buyerEmail ?? '')
-  const [isPaid, setIsPaid] = useState(false)
+  const [paidSoFar, setPaidSoFar] = useState(0)
   const [isPending, startTransition] = useTransition()
 
-  // Check existing payment on mount
+  const total = orderAmount ?? 0
+  const remaining = Math.max(0, total - paidSoFar)
+  const parsedAmount = parseInt(amount) || 0
+  const isFullPayment = parsedAmount > 0 && parsedAmount >= remaining
+  const isFullyPaid = total > 0 && paidSoFar >= total
+
+  // Load existing payments to calculate how much has been paid
   useEffect(() => {
     const supabase = createClient()
     if (!supabase) return
     supabase
       .from('payments')
-      .select('id')
+      .select('amount')
       .eq('order_id', orderId)
       .eq('status', 'completado')
-      .maybeSingle()
-      .then(({ data }) => { if (data) setIsPaid(true) })
+      .then(({ data }) => {
+        const paid = data?.reduce((sum, p) => sum + (p.amount ?? 0), 0) ?? 0
+        setPaidSoFar(paid)
+      })
   }, [orderId])
 
   const resetDialog = () => {
     setMethod(null)
-    setAmount(String(orderAmount ?? ''))
+    setAmount(String(remaining > 0 ? remaining : (orderAmount ?? '')))
     setNotes('')
     setEmail(buyerEmail ?? '')
   }
 
   const handleClose = () => { setOpen(false); resetDialog() }
 
-  const parsedAmount = parseInt(amount) || 0
+  const handleOpen = () => {
+    setAmount(String(remaining > 0 ? remaining : (orderAmount ?? '')))
+    setOpen(true)
+  }
 
   // ── Cash / Nequi / Brevo ─────────────────────────────────────────────────
   const handleManualPay = () => {
@@ -115,12 +126,20 @@ export function PaymentButton({ orderId, orderAmount, buyerEmail, onPaid }: Prop
         amount: parsedAmount,
         method: method as ManualPaymentMethod,
         notes,
+        mark_as_paid: isFullPayment,
       })
       if (result.ok) {
-        toast.success('Pago registrado correctamente')
-        setIsPaid(true)
-        handleClose()
-        onPaid?.()
+        if (isFullPayment) {
+          toast.success('Pago completo registrado')
+          setPaidSoFar(paidSoFar + parsedAmount)
+          handleClose()
+          onPaid?.()
+        } else {
+          toast.success(`Abono de ${formatCOP(parsedAmount)} registrado`)
+          setPaidSoFar(prev => prev + parsedAmount)
+          setAmount(String(Math.max(0, remaining - parsedAmount)))
+          setNotes('')
+        }
       } else {
         toast.error(`Error: ${result.error}`)
       }
@@ -146,7 +165,7 @@ export function PaymentButton({ orderId, orderAmount, buyerEmail, onPaid }: Prop
     })
   }
 
-  if (isPaid) {
+  if (isFullyPaid) {
     return (
       <Badge className="bg-green-100 text-green-800 border border-green-200 gap-1 py-1 px-2">
         <CheckCircle2 className="h-3.5 w-3.5" /> Pagado
@@ -160,10 +179,10 @@ export function PaymentButton({ orderId, orderAmount, buyerEmail, onPaid }: Prop
         size="sm"
         variant="outline"
         className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-        onClick={() => setOpen(true)}
+        onClick={handleOpen}
       >
         <CreditCard className="mr-2 h-4 w-4" />
-        Registrar Pago
+        {paidSoFar > 0 ? 'Registrar Abono' : 'Registrar Pago'}
       </Button>
 
       <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); else setOpen(true) }}>
@@ -192,7 +211,7 @@ export function PaymentButton({ orderId, orderAmount, buyerEmail, onPaid }: Prop
             </div>
           )}
 
-          {/* Step 2 — forms */}
+          {/* Step 2 — form */}
           {method && (
             <div className="space-y-4 py-2">
               <button
@@ -203,8 +222,8 @@ export function PaymentButton({ orderId, orderAmount, buyerEmail, onPaid }: Prop
               </button>
               <Separator />
 
-              {/* Amount field (all methods) */}
-              <div className="space-y-1.5">
+              {/* Amount field */}
+              <div className="space-y-2">
                 <Label>Monto (COP)</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -217,8 +236,39 @@ export function PaymentButton({ orderId, orderAmount, buyerEmail, onPaid }: Prop
                     disabled={method === 'payu'}
                   />
                 </div>
-                {parsedAmount > 0 && (
-                  <p className="text-xs text-muted-foreground">{formatCOP(parsedAmount)}</p>
+
+                {/* Ticket breakdown */}
+                {total > 0 && (
+                  <div className="rounded-lg border p-3 space-y-1.5 text-sm bg-muted/40">
+                    <div className="flex justify-between text-muted-foreground">
+                      <span>Total del ticket:</span>
+                      <span className="font-medium text-foreground">{formatCOP(total)}</span>
+                    </div>
+                    {paidSoFar > 0 && (
+                      <div className="flex justify-between text-emerald-700">
+                        <span>Ya pagado:</span>
+                        <span className="font-medium">{formatCOP(paidSoFar)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between border-t pt-1.5 font-medium">
+                      <span>Saldo pendiente:</span>
+                      <span>{formatCOP(remaining)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Confirmation indicator */}
+                {parsedAmount > 0 && isFullPayment && (
+                  <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-2.5 text-emerald-700">
+                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                    <span className="text-sm font-medium">Monto completo confirmado</span>
+                  </div>
+                )}
+                {parsedAmount > 0 && !isFullPayment && parsedAmount < remaining && (
+                  <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-amber-700">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span className="text-sm">Abono parcial · Faltará {formatCOP(remaining - parsedAmount)}</span>
+                  </div>
                 )}
               </div>
 
@@ -245,14 +295,14 @@ export function PaymentButton({ orderId, orderAmount, buyerEmail, onPaid }: Prop
                 </div>
               )}
 
-              {/* Notes (efectivo, nequi, brevo) */}
+              {/* Notes */}
               {method !== 'payu' && (
                 <div className="space-y-1.5">
                   <Label className="text-sm">
                     {method === 'efectivo' ? 'Observaciones (opcional)' : 'Referencia / Nro. transacción (opcional)'}
                   </Label>
                   <Textarea
-                    placeholder={method === 'efectivo' ? 'Ej: pago completo, sin vuelto' : 'Ej: #123456789'}
+                    placeholder={method === 'efectivo' ? 'Ej: pagó con billete de 50.000' : 'Ej: #123456789'}
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
                     rows={2}
@@ -281,11 +331,13 @@ export function PaymentButton({ orderId, orderAmount, buyerEmail, onPaid }: Prop
                 <Button
                   onClick={handleManualPay}
                   disabled={isPending || parsedAmount <= 0}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className={isFullPayment ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-500 hover:bg-amber-600'}
                 >
                   {isPending
                     ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando…</>
-                    : <><CheckCircle2 className="mr-2 h-4 w-4" />Confirmar Pago</>}
+                    : isFullPayment
+                      ? <><CheckCircle2 className="mr-2 h-4 w-4" />Confirmar Pago Completo</>
+                      : <><CheckCircle2 className="mr-2 h-4 w-4" />Registrar Abono</>}
                 </Button>
               )}
             </DialogFooter>

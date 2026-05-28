@@ -11,6 +11,7 @@ export async function registerManualPaymentAction(data: {
   amount: number
   method: ManualPaymentMethod
   notes: string
+  mark_as_paid: boolean
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const supabase = await createClient()
@@ -28,20 +29,26 @@ export async function registerManualPaymentAction(data: {
     })
     if (payError) return { ok: false, error: payError.message }
 
+    const orderPatch: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (data.mark_as_paid) {
+      orderPatch.payment_status = 'pagado'
+      orderPatch.final_price = data.amount
+    }
+
     const { error: orderError } = await supabase
       .from('orders')
-      .update({
-        final_price: data.amount,
-        payment_status: 'pagado',
-        updated_at: new Date().toISOString(),
-      })
+      .update(orderPatch)
       .eq('id', data.order_id)
     if (orderError) return { ok: false, error: orderError.message }
 
+    const historyNote = data.mark_as_paid
+      ? `Pago completo: ${data.method} — $${data.amount.toLocaleString('es-CO')}${data.notes ? ` (${data.notes.trim()})` : ''}`
+      : `Abono: ${data.method} — $${data.amount.toLocaleString('es-CO')}${data.notes ? ` (${data.notes.trim()})` : ''}`
+
     await supabase.from('order_history').insert({
       order_id: data.order_id,
-      status: 'entregado',
-      notes: `Pago registrado: ${data.method} — $${data.amount.toLocaleString('es-CO')}${data.notes ? ` (${data.notes.trim()})` : ''}`,
+      status: data.mark_as_paid ? 'entregado' : null,
+      notes: historyNote,
       changed_by: user?.id ?? null,
     })
 
