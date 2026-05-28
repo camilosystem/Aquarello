@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { Plus, Search, Bike, Phone, MapPin, ChevronRight, Loader2, CheckCircle2, XCircle } from 'lucide-react'
+import { Plus, Search, Bike, Phone, MapPin, ChevronRight, Loader2, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react'
 import { createDomiciliarioAction } from '@/app/operador/domiciliarios/actions'
 import type { Profile } from '@/lib/types'
 
@@ -25,13 +25,14 @@ interface DomiciliariosListClientProps {
   domiciliarios: Profile[]
 }
 
-const EMPTY_FORM = { full_name: '', email: '', phone: '', city: 'Bogotá' }
+const EMPTY_FORM = { full_name: '', email: '', phone: '', city: 'Bogotá', password: '', confirmPassword: '' }
 
 export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClientProps) {
   const router = useRouter()
   const [search, setSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
+  const [showPassword, setShowPassword] = useState(false)
   const [isPending, startTransition] = useTransition()
 
   const filtered = domiciliarios.filter((d) => {
@@ -51,12 +52,25 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
       toast.error('Nombre y email son obligatorios')
       return
     }
+    if (!form.password) {
+      toast.error('La contraseña es obligatoria')
+      return
+    }
+    if (form.password.length < 8) {
+      toast.error('La contraseña debe tener al menos 8 caracteres')
+      return
+    }
+    if (form.password !== form.confirmPassword) {
+      toast.error('Las contraseñas no coinciden')
+      return
+    }
     startTransition(async () => {
       const result = await createDomiciliarioAction(form)
       if (result.ok) {
-        toast.success('Domiciliario creado. Recibirá un email para activar su cuenta.')
+        toast.success('Domiciliario creado exitosamente')
         setDialogOpen(false)
         setForm(EMPTY_FORM)
+        setShowPassword(false)
         router.refresh()
       } else {
         toast.error(`Error: ${result.error}`)
@@ -156,7 +170,7 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
       )}
 
       {/* Dialog crear */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={(v) => { setDialogOpen(v); if (!v) { setForm(EMPTY_FORM); setShowPassword(false) } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Nuevo Domiciliario</DialogTitle>
@@ -201,8 +215,42 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
                 />
               </div>
             </div>
-            <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
-              El domiciliario recibirá un email para activar su cuenta y acceder a la app de domiciliarios.
+
+            <div className="space-y-3 rounded-lg border p-3">
+              <p className="text-sm font-medium">Credenciales de acceso</p>
+              <div className="space-y-2">
+                <Label htmlFor="d-password">Contraseña *</Label>
+                <div className="relative">
+                  <Input
+                    id="d-password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Mínimo 8 caracteres"
+                    value={form.password}
+                    onChange={(e) => setForm(p => ({ ...p, password: e.target.value }))}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword(v => !v)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="d-confirm">Confirmar contraseña *</Label>
+                <Input
+                  id="d-confirm"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Repite la contraseña"
+                  value={form.confirmPassword}
+                  onChange={(e) => setForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Comunica estas credenciales al domiciliario para que pueda ingresar a la app.
+              </p>
             </div>
           </div>
           <DialogFooter>

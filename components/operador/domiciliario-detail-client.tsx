@@ -24,9 +24,9 @@ import {
 import { toast } from 'sonner'
 import {
   ArrowLeft, Bike, Mail, Phone, MapPin, Calendar,
-  Save, Loader2, CheckCircle2, XCircle, Package
+  Save, Loader2, CheckCircle2, XCircle, Package, KeyRound, Eye, EyeOff
 } from 'lucide-react'
-import { updateDomiciliarioAction, toggleDomiciliarioActivoAction } from '@/app/operador/domiciliarios/actions'
+import { updateDomiciliarioAction, toggleDomiciliarioActivoAction, changePasswordDomiciliarioAction } from '@/app/operador/domiciliarios/actions'
 import { STATUS_LABELS, STATUS_COLORS, type Order, type Profile } from '@/lib/types'
 
 interface DomiciliarioDetailClientProps {
@@ -38,11 +38,14 @@ export function DomiciliarioDetailClient({ domiciliario, orders }: DomiciliarioD
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [isToggling, startToggle] = useTransition()
+  const [isChangingPwd, startChangePwd] = useTransition()
   const [form, setForm] = useState({
     full_name: domiciliario.full_name ?? '',
     phone: domiciliario.phone ?? '',
     city: domiciliario.city ?? '',
   })
+  const [pwdForm, setPwdForm] = useState({ newPassword: '', confirmPassword: '' })
+  const [showPwd, setShowPwd] = useState(false)
 
   const handleSave = () => {
     if (!form.full_name.trim()) { toast.error('El nombre es obligatorio'); return }
@@ -50,6 +53,21 @@ export function DomiciliarioDetailClient({ domiciliario, orders }: DomiciliarioD
       const result = await updateDomiciliarioAction(domiciliario.id, form)
       if (result.ok) toast.success('Domiciliario actualizado')
       else toast.error(`Error: ${result.error}`)
+    })
+  }
+
+  const handleChangePassword = () => {
+    if (!pwdForm.newPassword) { toast.error('Ingresa la nueva contraseña'); return }
+    if (pwdForm.newPassword.length < 8) { toast.error('La contraseña debe tener al menos 8 caracteres'); return }
+    if (pwdForm.newPassword !== pwdForm.confirmPassword) { toast.error('Las contraseñas no coinciden'); return }
+    startChangePwd(async () => {
+      const result = await changePasswordDomiciliarioAction(domiciliario.id, pwdForm.newPassword)
+      if (result.ok) {
+        toast.success('Contraseña actualizada correctamente')
+        setPwdForm({ newPassword: '', confirmPassword: '' })
+      } else {
+        toast.error(`Error: ${result.error}`)
+      }
     })
   }
 
@@ -138,6 +156,56 @@ export function DomiciliarioDetailClient({ domiciliario, orders }: DomiciliarioD
                 ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
                 : <><Save className="mr-2 h-4 w-4" />Guardar Cambios</>}
             </Button>
+
+            <Separator />
+
+            {/* Cambio de contraseña */}
+            <div className="space-y-3">
+              <p className="text-sm font-medium flex items-center gap-2">
+                <KeyRound className="h-4 w-4 text-muted-foreground" />
+                Cambiar Contraseña
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="dm-newpwd">Nueva contraseña</Label>
+                <div className="relative">
+                  <Input
+                    id="dm-newpwd"
+                    type={showPwd ? 'text' : 'password'}
+                    placeholder="Mínimo 8 caracteres"
+                    value={pwdForm.newPassword}
+                    onChange={(e) => setPwdForm(p => ({ ...p, newPassword: e.target.value }))}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPwd(v => !v)}
+                  >
+                    {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dm-confirmpwd">Confirmar contraseña</Label>
+                <Input
+                  id="dm-confirmpwd"
+                  type={showPwd ? 'text' : 'password'}
+                  placeholder="Repite la contraseña"
+                  value={pwdForm.confirmPassword}
+                  onChange={(e) => setPwdForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                />
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleChangePassword}
+                disabled={isChangingPwd}
+              >
+                {isChangingPwd
+                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Actualizando...</>
+                  : <><KeyRound className="mr-2 h-4 w-4" />Actualizar Contraseña</>}
+              </Button>
+            </div>
 
             <Separator />
 

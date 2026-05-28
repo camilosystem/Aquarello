@@ -15,18 +15,18 @@ export async function createDomiciliarioAction(data: {
   email: string
   phone: string
   city: string
+  password: string
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   try {
     const admin = getAdmin()
 
-    const tempPassword =
-      Math.random().toString(36).slice(-8) +
-      Math.random().toString(36).slice(-8).toUpperCase() +
-      '1!'
+    if (data.password.length < 8) {
+      return { ok: false, error: 'La contraseña debe tener al menos 8 caracteres' }
+    }
 
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
       email: data.email.trim(),
-      password: tempPassword,
+      password: data.password,
       email_confirm: true,
       user_metadata: { full_name: data.full_name.trim() },
     })
@@ -70,6 +70,24 @@ export async function updateDomiciliarioAction(
     if (error) return { ok: false, error: error.message }
 
     revalidatePath('/operador/domiciliarios')
+    revalidatePath(`/operador/domiciliarios/${id}`)
+    return { ok: true }
+  } catch (e) {
+    return { ok: false, error: String(e) }
+  }
+}
+
+export async function changePasswordDomiciliarioAction(
+  id: string,
+  newPassword: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    if (newPassword.length < 8) {
+      return { ok: false, error: 'La contraseña debe tener al menos 8 caracteres' }
+    }
+    const admin = getAdmin()
+    const { error } = await admin.auth.admin.updateUserById(id, { password: newPassword })
+    if (error) return { ok: false, error: error.message }
     revalidatePath(`/operador/domiciliarios/${id}`)
     return { ok: true }
   } catch (e) {
