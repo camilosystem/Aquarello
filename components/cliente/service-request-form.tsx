@@ -203,7 +203,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
           use_softener: preferences.useSoftener,
           use_degreaser: preferences.useDegreaser,
           use_bleach: preferences.useBleach,
-          scent: preferences.fragrance,
+          fragrance: preferences.fragrance,
           stain_treatment: preferences.stainCount > 0,
           stain_count: preferences.stainCount,
           special_instructions: preferences.notes || null,
@@ -219,9 +219,10 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
       })
 
       router.push(`/cliente/pedido-creado?id=${order.id}`)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating order:', error)
-      toast.error('Error al crear el pedido. Por favor intenta de nuevo.')
+      const msg = error?.message ?? error?.error_description ?? JSON.stringify(error)
+      toast.error(`Error: ${msg}`)
     } finally {
       setLoading(false)
     }
