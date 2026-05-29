@@ -203,7 +203,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
           use_softener: preferences.useSoftener,
           use_degreaser: preferences.useDegreaser,
           use_bleach: preferences.useBleach,
-          fragrance: preferences.fragrance,
+          scent: preferences.fragrance,
           stain_treatment: preferences.stainCount > 0,
           stain_count: preferences.stainCount,
           special_instructions: preferences.notes || null,
