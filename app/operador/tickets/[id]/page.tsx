@@ -44,6 +44,7 @@ import {
 import { formatOrderNumber, type Order, type OrderPreferences, type WashingProcess } from '@/lib/types'
 import { MachineTimer } from '@/components/operador/machine-timer'
 import { PaymentButton } from '@/components/payment-button'
+import { TicketPrintButton } from '@/components/operador/ticket-print-button'
 
 // Fallback mock machines (used if 'machines' table doesn't exist)
 const MOCK_WASHERS = [
@@ -661,7 +662,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl font-bold text-foreground">
                   Ticket {formatOrderNumber(order.order_number)}
                 </h1>
@@ -680,6 +681,11 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                 })}
               </p>
             </div>
+            <TicketPrintButton
+              order={order}
+              preferences={preferences}
+              clientName={clientName}
+            />
           </div>
 
           {/* NUEVO: CÓDIGO DE SEGURIDAD ULTRA VISIBLE */}
