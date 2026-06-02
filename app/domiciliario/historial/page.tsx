@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Loader2, Package, Search, Calendar, MapPin, Scale } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { STATUS_COLORS } from "@/lib/types"
+import { STATUS_COLORS, formatOrderNumber } from "@/lib/types"
 
 export default function HistorialPage() {
   const [user, setUser] = useState<any>(null)
@@ -118,7 +118,8 @@ export default function HistorialPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <p className="font-mono text-sm font-medium">{order.qr_code}</p>
+                        <p className="text-sm font-semibold">{formatOrderNumber((order as any).order_number)}</p>
+                        <p className="font-mono text-xs text-muted-foreground">{order.qr_code}</p>
                         <p className="text-sm text-muted-foreground">{order.customer_name}</p>
                       </div>
                       <Badge

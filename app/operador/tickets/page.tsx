@@ -20,7 +20,7 @@ import {
   MapPin,
   User
 } from 'lucide-react'
-import type { Order } from '@/lib/types'
+import { formatOrderNumber, type Order } from '@/lib/types'
 
 const STATUS_TABS = [
   { value: 'all', label: 'Todos' },
@@ -233,8 +233,7 @@ export default function TicketsPage() {
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <QrCode className="h-4 w-4 text-muted-foreground" />
-                                <span className="font-mono font-medium">{order.qr_code}</span>
+                                <span className="font-semibold text-base">{formatOrderNumber((order as any).order_number)}</span>
                               </div>
                               <div className="flex items-center gap-1 mt-0.5 text-sm font-medium text-foreground">
                                 <User className="h-3.5 w-3.5 text-muted-foreground" />

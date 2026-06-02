@@ -13,7 +13,7 @@ import {
   Droplets, Wind, Sparkles, Bike
 } from 'lucide-react'
 import { PWAInstallButton } from '@/components/pwa-install-button'
-import { STATUS_LABELS, STATUS_COLORS, type Order, type Profile } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, formatOrderNumber, type Order, type Profile } from '@/lib/types'
 
 interface DashboardStats {
   pendientes: number    // pendiente + recogido + en_deposito
@@ -240,7 +240,8 @@ export default function OperadorDashboard() {
                           <Shirt className="h-4 w-4 text-primary" />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-mono text-sm font-medium truncate">{order.qr_code}</p>
+                          <p className="text-sm font-semibold truncate">{formatOrderNumber((order as any).order_number)}</p>
+                          <p className="font-mono text-xs text-muted-foreground truncate">{order.qr_code}</p>
                           <p className="text-xs text-muted-foreground">
                             {order.walk_in_name ?? 'Cliente'} ·{' '}
                             {new Date(order.created_at).toLocaleDateString('es-CO')}

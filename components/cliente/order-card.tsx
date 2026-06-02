@@ -7,7 +7,7 @@ import { ChevronRight, QrCode } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { OrderStatusTimeline } from './order-status-timeline'
-import { STATUS_LABELS, formatCOP, type Order } from '@/lib/types'
+import { STATUS_LABELS, formatCOP, formatOrderNumber, type Order } from '@/lib/types'
 
 interface OrderCardProps {
   order: Order
@@ -25,10 +25,8 @@ export function OrderCard({ order }: OrderCardProps) {
             <div className="flex-1 space-y-3">
               {/* Header */}
               <div className="flex items-center gap-2">
-                <QrCode className="h-4 w-4 text-muted-foreground" />
-                <span className="font-mono text-sm text-muted-foreground">
-                  {order.qr_code}
-                </span>
+                <span className="font-semibold text-base">{formatOrderNumber(order.order_number)}</span>
+                <span className="font-mono text-xs text-muted-foreground">{order.qr_code}</span>
               </div>
 
               {/* Status badge */}

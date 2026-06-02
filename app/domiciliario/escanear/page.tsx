@@ -12,11 +12,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { Scanner } from '@yudiel/react-qr-scanner'
-import { 
-  ScanLine, 
-  Package, 
-  Scale, 
-  User, 
+import { formatOrderNumber } from '@/lib/types'
+import {
+  ScanLine,
+  Package,
+  Scale,
+  User,
   CheckCircle2,
   Loader2,
   QrCode,
@@ -274,7 +275,8 @@ function EscanearContent() {
                         <div>
                           <p className="font-bold">{order.cliente?.full_name || 'Cliente sin nombre'}</p>
                           <p className="text-sm text-muted-foreground">{order.pickup_address}</p>
-                          <p className="text-xs font-mono mt-1 text-primary">{order.qr_code}</p>
+                          <p className="text-sm font-semibold mt-0.5 text-primary">{formatOrderNumber((order as any).order_number)}</p>
+                          <p className="text-xs font-mono text-muted-foreground">{order.qr_code}</p>
                         </div>
                         <ArrowRight className="h-5 w-5 text-muted-foreground" />
                       </CardContent>
@@ -329,7 +331,8 @@ function EscanearContent() {
                   <User className="h-4 w-4 text-primary" />
                   <span className="font-bold">{activeOrder.cliente?.full_name}</span>
                 </div>
-                <p className="text-sm text-muted-foreground font-mono">{activeOrder.qr_code}</p>
+                <p className="text-sm font-semibold">{formatOrderNumber((activeOrder as any).order_number)}</p>
+                <p className="text-xs text-muted-foreground font-mono">{activeOrder.qr_code}</p>
               </CardContent>
             </Card>
 

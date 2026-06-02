@@ -44,15 +44,16 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { OrderStatusTimeline } from './order-status-timeline'
 import { createClient } from '@/lib/supabase/client'
-import { 
-  STATUS_LABELS, 
-  formatCOP, 
+import {
+  STATUS_LABELS,
+  formatCOP,
+  formatOrderNumber,
   FRAGRANCE_OPTIONS,
-  type Order, 
-  type OrderPreferences, 
-  type OrderHistory, 
-  type Payment, 
-  type Receipt 
+  type Order,
+  type OrderPreferences,
+  type OrderHistory,
+  type Payment,
+  type Receipt
 } from '@/lib/types'
 
 type PaymentMethod = 'tarjeta' | 'nequi' | 'efectivo' | 'transferencia' | 'daviplata'
@@ -221,7 +222,8 @@ export function OrderDetailClient({
         </Link>
         <div>
           <h1 className="text-xl font-bold text-foreground">Detalle del Pedido</h1>
-          <p className="text-sm text-muted-foreground font-mono">{order.qr_code}</p>
+          <p className="text-sm font-semibold text-primary">{formatOrderNumber(order.order_number)}</p>
+          <p className="text-xs text-muted-foreground font-mono">{order.qr_code}</p>
         </div>
       </div>
 

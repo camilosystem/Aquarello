@@ -27,7 +27,7 @@ import {
   Save, Loader2, CheckCircle2, XCircle, Package, KeyRound, Eye, EyeOff
 } from 'lucide-react'
 import { updateDomiciliarioAction, toggleDomiciliarioActivoAction, changePasswordDomiciliarioAction } from '@/app/operador/domiciliarios/actions'
-import { STATUS_LABELS, STATUS_COLORS, type Order, type Profile } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, formatOrderNumber, type Order, type Profile } from '@/lib/types'
 
 interface DomiciliarioDetailClientProps {
   domiciliario: Profile
@@ -325,7 +325,8 @@ export function DomiciliarioDetailClient({ domiciliario, orders }: DomiciliarioD
                       <Bike className="h-4 w-4 text-primary" />
                     </div>
                     <div>
-                      <p className="font-mono text-sm font-medium">{order.qr_code}</p>
+                      <p className="text-sm font-semibold">{formatOrderNumber(order.order_number)}</p>
+                      <p className="font-mono text-xs text-muted-foreground">{order.qr_code}</p>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                         <span>{format(new Date(order.created_at), 'd MMM yyyy', { locale: es })}</span>
                         {order.pickup_address && (

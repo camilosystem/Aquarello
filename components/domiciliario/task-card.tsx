@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { STATUS_LABELS, type OrderStatus } from '@/lib/types'
+import { STATUS_LABELS, formatOrderNumber, type OrderStatus } from '@/lib/types'
 import { useRouter } from 'next/navigation'
 import { PaymentButton } from '@/components/payment-button'
 
@@ -158,9 +158,9 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                 </span>
               </div>
               
-              <div className="flex items-center gap-2 text-sm font-mono text-muted-foreground mb-1">
-                <QrCode className="h-4 w-4" />
-                {order.qr_code}
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-semibold">{formatOrderNumber((order as any).order_number)}</span>
+                <span className="text-xs font-mono text-muted-foreground">{order.qr_code}</span>
               </div>
 
               <div className="flex items-center gap-2 text-sm font-medium mb-1 text-foreground">
@@ -345,7 +345,7 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                             </AlertDialogTitle>
                             <AlertDialogDescription className="space-y-2">
                               <p>
-                                Estás a punto de marcar la orden <strong className="font-mono">{order.qr_code}</strong> como <strong>entregada</strong>.
+                                Estás a punto de marcar la orden <strong>{formatOrderNumber((order as any).order_number)}</strong> como <strong>entregada</strong>.
                               </p>
                               <p className="text-sm">
                                 Esta acción es irreversible. Asegúrate de que el cliente ha recibido su ropa en buen estado.

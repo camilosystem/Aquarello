@@ -63,6 +63,7 @@ export interface OrderPreferences {
 // Order interface
 export interface Order {
   id: string;
+  order_number: number | null;
   qr_code: string;
   user_id: string | null;
   walk_in_name: string | null;
@@ -281,6 +282,12 @@ export function formatCOP(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+// Format order number as #000001
+export function formatOrderNumber(n: number | null | undefined): string {
+  if (!n) return '—'
+  return `#${String(n).padStart(6, '0')}`
 }
 
 // Generate QR code string

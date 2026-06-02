@@ -6,12 +6,13 @@ import { CheckCircle, Package, Clock, MapPin, ArrowRight, Home, QrCode } from 'l
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { createClient } from '@/lib/supabase/client'
-import { formatCOP } from '@/lib/types'
+import { formatCOP, formatOrderNumber } from '@/lib/types'
 import Link from 'next/link'
 import QRCode from 'qrcode'
 
 interface Order {
   id: string
+  order_number: number | null
   qr_code: string
   status: string
   pickup_address: string
@@ -88,16 +89,18 @@ function PedidoCreadoContent() {
         <>
           <Card className="border-primary/20 bg-primary/5">
             <CardHeader className="text-center pb-2">
-              <CardTitle className="text-lg">Tu Código de Servicio</CardTitle>
-              <CardDescription>Muestra este código al domiciliario cuando llegue</CardDescription>
+              <CardTitle className="text-lg">Tu Número de Pedido</CardTitle>
+              <CardDescription>Usa este número para hacer seguimiento de tu orden</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center">
+            <CardContent className="flex flex-col items-center justify-center gap-3">
+              <p className="text-4xl font-bold tracking-widest text-primary">{formatOrderNumber(order.order_number)}</p>
+              <p className="text-xs text-muted-foreground">Código QR para el domiciliario</p>
               {qrImage ? (
-                <img src={qrImage} alt="QR Code" className="w-48 h-48 rounded-xl bg-white p-2 shadow-sm" />
+                <img src={qrImage} alt="QR Code" className="w-36 h-36 rounded-xl bg-white p-2 shadow-sm" />
               ) : (
-                <QrCode className="h-32 w-32 text-muted-foreground opacity-50" />
+                <QrCode className="h-24 w-24 text-muted-foreground opacity-50" />
               )}
-              <p className="font-mono font-bold mt-4 text-lg">{order.qr_code}</p>
+              <p className="font-mono text-xs text-muted-foreground">{order.qr_code}</p>
             </CardContent>
           </Card>
 

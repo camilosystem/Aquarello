@@ -41,7 +41,7 @@ import {
   Save,
   Loader2
 } from 'lucide-react'
-import type { Order, OrderPreferences, WashingProcess } from '@/lib/types'
+import { formatOrderNumber, type Order, type OrderPreferences, type WashingProcess } from '@/lib/types'
 import { MachineTimer } from '@/components/operador/machine-timer'
 import { PaymentButton } from '@/components/payment-button'
 
@@ -663,8 +663,9 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
             <div className="flex-1">
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold text-foreground">
-                  Ticket {order.qr_code}
+                  Ticket {formatOrderNumber(order.order_number)}
                 </h1>
+                <p className="text-xs font-mono text-muted-foreground">{order.qr_code}</p>
                 <Badge className={getStatusColor(order.status)}>
                   {getStatusLabel(order.status)}
                 </Badge>
@@ -720,7 +721,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
                   <QrCode className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm text-muted-foreground">Código QR</p>
-                    <p className="font-mono font-medium">{order.qr_code}</p>
+                    <p className="font-mono text-sm text-muted-foreground">{order.qr_code}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
