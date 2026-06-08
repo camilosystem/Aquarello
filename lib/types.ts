@@ -50,13 +50,14 @@ export interface OrderPreferences {
   use_softener: boolean;
   use_degreaser: boolean;
   use_bleach: boolean;
-  fragrance: string | null;
-  ironing_required: boolean;
-  special_folding: boolean;
-  delicate_care: boolean;
+  scent: string | null;
   stain_treatment: boolean;
   stain_count: number;
-  notes: string | null;
+  special_instructions: string | null;
+  // legacy columns (may exist in older rows)
+  ironing_required?: boolean;
+  special_folding?: boolean;
+  delicate_care?: boolean;
   created_at: string;
 }
 

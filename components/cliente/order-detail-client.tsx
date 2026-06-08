@@ -209,7 +209,7 @@ export function OrderDetailClient({
     }
   }
 
-  const fragranceLabel = FRAGRANCE_OPTIONS.find(f => f.value === preferences?.fragrance)?.label || 'No seleccionada'
+  const fragranceLabel = FRAGRANCE_OPTIONS.find(f => f.value === preferences?.scent)?.label || 'Sin fragancia'
 
   return (
     <div className="space-y-6">
@@ -353,6 +353,12 @@ export function OrderDetailClient({
                   <span>Separar blancos</span>
                 </div>
               )}
+              {preferences.separate_colors && (
+                <div className="flex items-center gap-2 text-sm">
+                  <Palette className="h-4 w-4 text-primary" />
+                  <span>Separar colores</span>
+                </div>
+              )}
               {preferences.use_softener && (
                 <div className="flex items-center gap-2 text-sm">
                   <Droplets className="h-4 w-4 text-primary" />
@@ -362,7 +368,7 @@ export function OrderDetailClient({
               {preferences.use_bleach && (
                 <div className="flex items-center gap-2 text-sm">
                   <Sparkles className="h-4 w-4 text-primary" />
-                  <span>Blanqueador</span>
+                  <span>Oxígeno Activo</span>
                 </div>
               )}
               {preferences.use_degreaser && (
@@ -374,36 +380,22 @@ export function OrderDetailClient({
               {preferences.stain_treatment && (
                 <div className="flex items-center gap-2 text-sm">
                   <AlertTriangle className="h-4 w-4 text-primary" />
-                  <span>Quita manchas</span>
-                </div>
-              )}
-              {preferences.delicate_care && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Star className="h-4 w-4 text-primary" />
-                  <span>Cuidado delicado</span>
-                </div>
-              )}
-              {preferences.ironing_required && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Shirt className="h-4 w-4 text-primary" />
-                  <span>Planchado</span>
-                </div>
-              )}
-              {preferences.special_folding && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Star className="h-4 w-4 text-primary" />
-                  <span>Doblado especial</span>
+                  <span>Manchas{(preferences.stain_count ?? 0) > 0 ? ` (${preferences.stain_count})` : ''}</span>
                 </div>
               )}
             </div>
-            <Separator className="my-4" />
-            <div className="flex items-center gap-2 text-sm">
-              <Palette className="h-4 w-4 text-primary" />
-              <span>Fragancia: {fragranceLabel}</span>
-            </div>
-            {preferences.notes && (
+            {preferences.scent && preferences.scent !== 'ninguno' && (
+              <>
+                <Separator className="my-4" />
+                <div className="flex items-center gap-2 text-sm">
+                  <Palette className="h-4 w-4 text-primary" />
+                  <span>Fragancia: {fragranceLabel}</span>
+                </div>
+              </>
+            )}
+            {preferences.special_instructions && (
               <div className="mt-3 p-3 bg-muted/50 rounded-lg">
-                <p className="text-sm text-muted-foreground">{preferences.notes}</p>
+                <p className="text-sm text-muted-foreground">{preferences.special_instructions}</p>
               </div>
             )}
           </CardContent>

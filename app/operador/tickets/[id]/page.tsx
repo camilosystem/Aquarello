@@ -783,47 +783,39 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               </CardHeader>
               <CardContent>
                 {preferences ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Ropa blanca separada</span>
-                      <Badge variant={preferences.separate_whites ? 'default' : 'secondary'}>
-                        {preferences.separate_whites ? 'Sí' : 'No'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Suavizante</span>
-                      <Badge variant={preferences.use_softener ? 'default' : 'secondary'}>
-                        {preferences.use_softener ? 'Sí' : 'No'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Blanqueador</span>
-                      <Badge variant={preferences.use_bleach ? 'default' : 'secondary'}>
-                        {preferences.use_bleach ? 'Sí' : 'No'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Desengrasante</span>
-                      <Badge variant={preferences.use_degreaser ? 'default' : 'secondary'}>
-                        {preferences.use_degreaser ? 'Sí' : 'No'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">Planchado</span>
-                      <Badge variant={preferences.ironing_required ? 'default' : 'secondary'}>
-                        {preferences.ironing_required ? 'Sí' : 'No'}
-                      </Badge>
-                    </div>
-                    {preferences.fragrance && (
+                  <div className="space-y-2.5">
+                    {[
+                      { label: 'Separar ropa blanca',   value: preferences.separate_whites },
+                      { label: 'Separar ropa de color', value: preferences.separate_colors },
+                      { label: 'Suavizante',             value: preferences.use_softener },
+                      { label: 'Oxígeno Activo',         value: preferences.use_bleach },
+                      { label: 'Desengrasante',          value: preferences.use_degreaser },
+                      { label: 'Tratamiento de manchas', value: preferences.stain_treatment },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex items-center justify-between">
+                        <span className="text-sm">{label}</span>
+                        <Badge variant={value ? 'default' : 'secondary'}
+                          className={value ? 'bg-emerald-100 text-emerald-800' : ''}>
+                          {value ? 'Sí' : 'No'}
+                        </Badge>
+                      </div>
+                    ))}
+                    {(preferences.stain_count ?? 0) > 0 && (
                       <div className="flex items-center justify-between">
-                        <span className="text-sm">Fragancia</span>
-                        <Badge>{preferences.fragrance}</Badge>
+                        <span className="text-sm text-muted-foreground">Manchas a tratar</span>
+                        <Badge variant="outline">{preferences.stain_count}</Badge>
                       </div>
                     )}
-                    {preferences.notes && (
+                    {preferences.scent && preferences.scent !== 'ninguno' && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Fragancia</span>
+                        <Badge variant="outline">{preferences.scent}</Badge>
+                      </div>
+                    )}
+                    {preferences.special_instructions && (
                       <div className="pt-2 border-t">
                         <p className="text-sm text-muted-foreground">Notas especiales:</p>
-                        <p className="text-sm mt-1">{preferences.notes}</p>
+                        <p className="text-sm mt-1">{preferences.special_instructions}</p>
                       </div>
                     )}
                   </div>

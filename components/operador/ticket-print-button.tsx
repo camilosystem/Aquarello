@@ -83,17 +83,17 @@ export function TicketPrintButton({ order, preferences, clientName }: Props) {
          </div>`
       : ''
 
-    const scentRow = preferences?.fragrance && preferences.fragrance !== 'ninguno'
+    const scentRow = preferences?.scent && preferences.scent !== 'ninguno'
       ? `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f1f5f9;">
            <span style="font-size:13px;color:#64748b;">Fragancia</span>
-           <span style="font-size:13px;font-weight:600;">${preferences.fragrance}</span>
+           <span style="font-size:13px;font-weight:600;">${preferences.scent}</span>
          </div>`
       : ''
 
-    const notesRow = preferences?.notes
+    const notesRow = preferences?.special_instructions
       ? `<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border-radius:6px;border-left:3px solid #6366f1;">
            <p style="font-size:11px;color:#6366f1;font-weight:600;margin:0 0 3px 0;">NOTAS ESPECIALES</p>
-           <p style="font-size:13px;margin:0;">${preferences.notes}</p>
+           <p style="font-size:13px;margin:0;">${preferences.special_instructions}</p>
          </div>`
       : ''
 
