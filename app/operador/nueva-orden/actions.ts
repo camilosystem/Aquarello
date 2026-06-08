@@ -49,7 +49,7 @@ export async function createOrdenOperadorAction(
         walk_in_name: data.walk_in_name,
         walk_in_phone: data.walk_in_phone,
         operator_id: data.operator_id,
-        status: 'en_deposito',
+        status: 'pendiente',
         pickup_address: data.pickup_address,
         estimated_price: data.estimated_price,
       })
@@ -73,8 +73,8 @@ export async function createOrdenOperadorAction(
 
     await admin.from('order_history').insert({
       order_id: order.id,
-      status: 'en_deposito',
-      notes: `Orden creada en planta por operador para ${data.walk_in_name}`,
+      status: 'pendiente',
+      notes: `Orden creada por operador para ${data.walk_in_name}, pendiente de recogida`,
       changed_by: data.operator_id,
     })
 
