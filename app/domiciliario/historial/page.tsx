@@ -43,7 +43,7 @@ export default function HistorialPage() {
 
   const filteredOrders = orders.filter(order =>
     order.qr_code?.toLowerCase().includes(search.toLowerCase()) ||
-    order.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+    (order.walk_in_name || '')?.toLowerCase().includes(search.toLowerCase()) ||
     order.pickup_address?.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -120,7 +120,7 @@ export default function HistorialPage() {
                       <div>
                         <p className="text-sm font-semibold">{formatOrderNumber((order as any).order_number)}</p>
                         <p className="font-mono text-xs text-muted-foreground">{order.qr_code}</p>
-                        <p className="text-sm text-muted-foreground">{order.customer_name}</p>
+                        <p className="text-sm text-muted-foreground">{order.walk_in_name || 'Sin nombre'}</p>
                       </div>
                       <Badge
                         style={{

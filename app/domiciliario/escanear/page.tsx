@@ -123,9 +123,9 @@ function EscanearContent() {
           .single()
         
         // Se lo inyectamos a la orden para que la pantalla lo muestre bien
-        order.cliente = profile || { full_name: 'Cliente sin nombre', phone: '' }
+        order.cliente = profile || { full_name: order.walk_in_name || 'Cliente sin nombre', phone: order.walk_in_phone || '' }
       } else {
-        order.cliente = { full_name: 'Cliente sin nombre', phone: '' }
+        order.cliente = { full_name: order.walk_in_name || 'Cliente sin nombre', phone: order.walk_in_phone || '' }
       }
 
       // 3. Auto-asignar la orden a este domiciliario

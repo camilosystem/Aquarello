@@ -103,21 +103,24 @@ export default function DomiciliarioPage() {
         const attachProfiles = async (ordersList: any[]) => {
           if (!ordersList || ordersList.length === 0) return []
           const userIds = [...new Set(ordersList.map(o => o.user_id).filter(Boolean))]
-          if (userIds.length === 0) return ordersList
 
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("id, full_name, phone")
-            .in("id", userIds)
-
-          const profilesMap = (profiles || []).reduce((acc: any, p: any) => {
-            acc[p.id] = p
-            return acc
-          }, {})
+          let profilesMap: Record<string, any> = {}
+          if (userIds.length > 0) {
+            const { data: profiles } = await supabase
+              .from("profiles")
+              .select("id, full_name, phone")
+              .in("id", userIds)
+            profilesMap = (profiles || []).reduce((acc: any, p: any) => {
+              acc[p.id] = p
+              return acc
+            }, {})
+          }
 
           return ordersList.map(o => ({
             ...o,
-            cliente: profilesMap[o.user_id] || { full_name: 'Cliente sin nombre', phone: '' }
+            cliente: o.user_id
+              ? (profilesMap[o.user_id] || { full_name: o.walk_in_name || 'Cliente sin nombre', phone: o.walk_in_phone || '' })
+              : { full_name: o.walk_in_name || 'Cliente sin nombre', phone: o.walk_in_phone || '' }
           }))
         }
 
