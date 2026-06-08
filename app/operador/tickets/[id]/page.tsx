@@ -331,6 +331,30 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
     setAssigning(false)
   }
 
+  const handleCancelOrder = async () => {
+    setSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'cancelado', updated_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) throw error
+      await supabase.from('order_history').insert({
+        order_id: id,
+        status: 'cancelado',
+        notes: 'Orden cancelada por el operador.',
+        changed_by: user?.id ?? null,
+      })
+      toast.success('Orden cancelada')
+      router.push('/operador/tickets')
+    } catch (e: any) {
+      toast.error(`Error al cancelar: ${e?.message ?? 'Error inesperado'}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // --- PHASE CONTROL (M3) ---
 
   const writeHistory = async (newStatus: string, notes: string) => {
@@ -648,7 +672,7 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
   // Actualizamos las condiciones para incluir los nuevos estados
   const canStartProcess = ['en_deposito', 'en_transito'].includes(order.status) || order.status === 'pendiente' || order.status === 'recogido'
   const isProcessing = ['en_lavado', 'en_secado', 'en_alistamiento'].includes(order.status)
-  const isCompleted = ['en_ruta_entrega', 'entregado', 'completado'].includes(order.status)
+  const isCompleted = ['en_ruta_entrega', 'entregado', 'completado', 'cancelado'].includes(order.status)
 
   return (
     <div className="flex min-h-screen bg-muted/30">
@@ -686,6 +710,33 @@ export default function TicketDetailPage({ params }: { params: Promise<{ id: str
               preferences={preferences}
               clientName={clientName}
             />
+            {!isCompleted && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" disabled={saving}>
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Cancelar orden
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>¿Cancelar esta orden?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      La orden {formatOrderNumber(order.order_number)} pasará a estado <strong>Cancelado</strong> y no se podrá revertir desde la app.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Volver</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={handleCancelOrder}
+                    >
+                      Sí, cancelar
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
 
           {/* NUEVO: CÓDIGO DE SEGURIDAD ULTRA VISIBLE */}

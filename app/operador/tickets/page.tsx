@@ -102,7 +102,7 @@ export default function TicketsPage() {
         'washing': ['en_lavado'],
         'drying': ['en_secado'],
         'ready': ['en_alistamiento'],
-        'completed': ['en_ruta_entrega', 'entregado', 'completado']
+        'completed': ['en_ruta_entrega', 'entregado', 'completado', 'cancelado']
       }
       filtered = filtered.filter(o => statusMap[activeTab]?.includes(o.status))
     }
@@ -135,7 +135,8 @@ export default function TicketsPage() {
       'en_alistamiento': 'bg-pink-100 text-pink-800',
       'en_ruta_entrega': 'bg-emerald-100 text-emerald-800',
       'entregado': 'bg-green-100 text-green-800',
-      'completado': 'bg-green-100 text-green-800'
+      'completado': 'bg-green-100 text-green-800',
+      'cancelado': 'bg-red-100 text-red-800'
     }
     return colors[status] || 'bg-muted text-muted-foreground'
   }
@@ -151,7 +152,8 @@ export default function TicketsPage() {
       'en_alistamiento': 'Alistando',
       'en_ruta_entrega': 'En Ruta',
       'entregado': 'Entregado',
-      'completado': 'Completado'
+      'completado': 'Completado',
+      'cancelado': 'Cancelado'
     }
     return labels[status] || status
   }
