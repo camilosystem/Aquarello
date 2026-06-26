@@ -1,13 +1,13 @@
 import type { Metadata, Viewport } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Lavva Driver',
-  description: 'Panel de domiciliario para recogida y entrega de ropa',
-  manifest: '/manifest-domiciliario.json', // ¡Aquí está la magia de la marca blanca separada!
+  title: 'Aquarello Driver',
+  description: 'Driver panel for laundry pickup and delivery',
+  manifest: '/manifest-domiciliario.json', // separate white-label manifest
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0891b2',
+  themeColor: '#63c91e',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

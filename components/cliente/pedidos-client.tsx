@@ -50,9 +50,9 @@ export function PedidosClient({ initialOrders, userId }: PedidosClientProps) {
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
           <Package className="h-8 w-8 text-muted-foreground" />
         </div>
-        <h3 className="font-semibold text-foreground">No tienes pedidos</h3>
+        <h3 className="font-semibold text-foreground">You have no orders</h3>
         <p className="text-sm text-muted-foreground mt-1">
-          Solicita tu primer servicio de lavandería
+          Request your first laundry service
         </p>
       </div>
     )
@@ -63,7 +63,7 @@ export function PedidosClient({ initialOrders, userId }: PedidosClientProps) {
       {activeOrders.length > 0 && (
         <section>
           <h2 className="text-lg font-semibold mb-4 text-foreground">
-            Pedidos Activos ({activeOrders.length})
+            Active Orders ({activeOrders.length})
           </h2>
           <div className="space-y-3">
             {activeOrders.map((order) => (
@@ -76,7 +76,7 @@ export function PedidosClient({ initialOrders, userId }: PedidosClientProps) {
       {pastOrders.length > 0 && (
         <section>
           <h2 className="text-lg font-semibold mb-4 text-muted-foreground">
-            Historial ({pastOrders.length})
+            History ({pastOrders.length})
           </h2>
           <div className="space-y-3">
             {pastOrders.map((order) => (

@@ -1,9 +1,9 @@
-'use client'
+﻿'use client'
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,7 +26,7 @@ import {
   createSupplierAction, updateSupplierAction, deleteSupplierAction,
   createPurchaseAction, deletePurchaseAction,
 } from '@/app/operador/compras/actions'
-import { formatCOP, type Supplier, type Purchase, type InventoryItem } from '@/lib/types'
+import { formatUSD, type Supplier, type Purchase, type InventoryItem } from '@/lib/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -89,13 +89,13 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
   }
 
   const handleSaveSupplier = () => {
-    if (!supplierForm.name.trim()) { toast.error('El nombre es obligatorio'); return }
+    if (!supplierForm.name.trim()) { toast.error('Name is required'); return }
     startTransition(async () => {
       const result = editingSupplier
         ? await updateSupplierAction(editingSupplier.id, supplierForm)
         : await createSupplierAction(supplierForm)
       if (result.ok) {
-        toast.success(editingSupplier ? 'Proveedor actualizado' : 'Proveedor creado')
+        toast.success(editingSupplier ? 'Supplier updated' : 'Supplier created')
         setSupplierDialog(false)
         router.refresh()
       } else {
@@ -107,7 +107,7 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
   const handleDeleteSupplier = (id: string) => {
     startTransition(async () => {
       const result = await deleteSupplierAction(id)
-      if (result.ok) { toast.success('Proveedor eliminado'); router.refresh() }
+      if (result.ok) { toast.success('Supplier deleted'); router.refresh() }
       else toast.error(`Error: ${result.error}`)
     })
   }
@@ -140,7 +140,7 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
 
   const handleSavePurchase = () => {
     const validLines = computedLines.filter(l => l.inventory_item_id && l.quantity > 0)
-    if (validLines.length === 0) { toast.error('Agrega al menos un ítem válido'); return }
+    if (validLines.length === 0) { toast.error('Add at least one valid item'); return }
     startTransition(async () => {
       const result = await createPurchaseAction({
         supplier_id: purchaseForm.supplier_id || null,
@@ -150,7 +150,7 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
         lines: validLines,
       })
       if (result.ok) {
-        toast.success('Compra registrada. Inventario actualizado.')
+        toast.success('Purchase recorded. Inventory updated.')
         setPurchaseDialog(false)
         router.refresh()
       } else {
@@ -162,7 +162,7 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
   const handleDeletePurchase = (id: string) => {
     startTransition(async () => {
       const result = await deletePurchaseAction(id)
-      if (result.ok) { toast.success('Compra eliminada. Inventario revertido.'); router.refresh() }
+      if (result.ok) { toast.success('Purchase deleted. Inventory reverted.'); router.refresh() }
       else toast.error(`Error: ${result.error}`)
     })
   }
@@ -172,24 +172,24 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
   return (
     <>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Compras y Proveedores</h1>
+        <h1 className="text-2xl font-bold">Purchases & Suppliers</h1>
       </div>
 
       <Tabs defaultValue="proveedores">
         <TabsList>
           <TabsTrigger value="proveedores" className="flex items-center gap-2">
-            <Users className="h-4 w-4" /> Proveedores
+            <Users className="h-4 w-4" /> Suppliers
           </TabsTrigger>
           <TabsTrigger value="compras" className="flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4" /> Compras
+            <ShoppingCart className="h-4 w-4" /> Purchases
           </TabsTrigger>
         </TabsList>
 
-        {/* ── Proveedores tab ──────────────────────────────────────────────── */}
+        {/* ── Suppliers tab ──────────────────────────────────────────────── */}
         <TabsContent value="proveedores" className="space-y-4 mt-4">
           <div className="flex justify-end">
             <Button onClick={openCreateSupplier}>
-              <Plus className="mr-2 h-4 w-4" /> Nuevo Proveedor
+              <Plus className="mr-2 h-4 w-4" /> New Supplier
             </Button>
           </div>
 
@@ -197,7 +197,7 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
             <Card>
               <CardContent className="py-16 text-center text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                <p>No hay proveedores registrados aún.</p>
+                <p>No suppliers registered yet.</p>
               </CardContent>
             </Card>
           ) : (
@@ -224,18 +224,18 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>¿Eliminar {s.name}?</AlertDialogTitle>
+                              <AlertDialogTitle>Delete {s.name}?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Las compras registradas con este proveedor mantendrán el registro histórico.
+                                Purchases recorded with this supplier will keep their historical record.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
                                 className="bg-red-600 hover:bg-red-700"
                                 onClick={() => handleDeleteSupplier(s.id)}
                               >
-                                Eliminar
+                                Delete
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -266,11 +266,11 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
           )}
         </TabsContent>
 
-        {/* ── Compras tab ──────────────────────────────────────────────────── */}
+        {/* ── Purchases tab ──────────────────────────────────────────────────── */}
         <TabsContent value="compras" className="space-y-4 mt-4">
           <div className="flex justify-end">
             <Button onClick={openCreatePurchase}>
-              <Plus className="mr-2 h-4 w-4" /> Registrar Compra
+              <Plus className="mr-2 h-4 w-4" /> Record Purchase
             </Button>
           </div>
 
@@ -278,7 +278,7 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
             <Card>
               <CardContent className="py-16 text-center text-muted-foreground">
                 <ShoppingCart className="h-12 w-12 mx-auto mb-3 opacity-40" />
-                <p>No hay compras registradas aún.</p>
+                <p>No purchases recorded yet.</p>
               </CardContent>
             </Card>
           ) : (
@@ -293,7 +293,7 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
                         </div>
                         <div className="min-w-0">
                           <p className="font-semibold">
-                            {p.supplier?.name ?? 'Sin proveedor'}
+                            {p.supplier?.name ?? 'No supplier'}
                             {p.invoice_number && (
                               <span className="text-muted-foreground font-normal text-sm ml-2">
                                 #{p.invoice_number}
@@ -301,9 +301,9 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
                             )}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(p.purchase_date), "d 'de' MMMM, yyyy", { locale: es })}
+                            {format(new Date(p.purchase_date), "MMMM d, yyyy", { locale: enUS })}
                             {' · '}
-                            {p.items_count} ítem{p.items_count !== 1 ? 's' : ''}
+                            {p.items_count} item{p.items_count !== 1 ? 's' : ''}
                           </p>
                           {p.notes && (
                             <p className="text-xs text-muted-foreground mt-0.5 truncate">{p.notes}</p>
@@ -311,7 +311,7 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
                         </div>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
-                        <p className="font-bold text-lg">{formatCOP(p.total_amount)}</p>
+                        <p className="font-bold text-lg">{formatUSD(p.total_amount)}</p>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50">
@@ -320,19 +320,19 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
-                              <AlertDialogTitle>¿Eliminar esta compra?</AlertDialogTitle>
+                              <AlertDialogTitle>Delete this purchase?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Las cantidades añadidas al inventario por esta compra serán revertidas.
-                                Esta acción no se puede deshacer.
+                                The quantities added to inventory by this purchase will be reverted.
+                                This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
                                 className="bg-red-600 hover:bg-red-700"
                                 onClick={() => handleDeletePurchase(p.id)}
                               >
-                                Sí, eliminar
+                                Yes, delete
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
@@ -351,30 +351,30 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
       <Dialog open={supplierDialog} onOpenChange={setSupplierDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingSupplier ? 'Editar Proveedor' : 'Nuevo Proveedor'}</DialogTitle>
+            <DialogTitle>{editingSupplier ? 'Edit Supplier' : 'New Supplier'}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <div className="space-y-2">
-              <Label>Nombre *</Label>
+              <Label>Name *</Label>
               <Input
-                placeholder="Empresa o persona"
+                placeholder="Company or person"
                 value={supplierForm.name}
                 onChange={e => setSupplierForm(p => ({ ...p, name: e.target.value }))}
               />
             </div>
             <div className="space-y-2">
-              <Label>Contacto</Label>
+              <Label>Contact</Label>
               <Input
-                placeholder="Nombre del representante"
+                placeholder="Representative name"
                 value={supplierForm.contact_name}
                 onChange={e => setSupplierForm(p => ({ ...p, contact_name: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Teléfono</Label>
+                <Label>Phone</Label>
                 <Input
-                  placeholder="3001234567"
+                  placeholder="(555) 123-4567"
                   value={supplierForm.phone}
                   onChange={e => setSupplierForm(p => ({ ...p, phone: e.target.value }))}
                 />
@@ -383,24 +383,24 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
                 <Label>Email</Label>
                 <Input
                   type="email"
-                  placeholder="proveedor@ejemplo.com"
+                  placeholder="supplier@example.com"
                   value={supplierForm.email}
                   onChange={e => setSupplierForm(p => ({ ...p, email: e.target.value }))}
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Dirección</Label>
+              <Label>Address</Label>
               <Input
-                placeholder="Calle, ciudad"
+                placeholder="Street, city"
                 value={supplierForm.address}
                 onChange={e => setSupplierForm(p => ({ ...p, address: e.target.value }))}
               />
             </div>
             <div className="space-y-2">
-              <Label>Notas</Label>
+              <Label>Notes</Label>
               <Textarea
-                placeholder="Observaciones del proveedor…"
+                placeholder="Supplier notes…"
                 value={supplierForm.notes}
                 onChange={e => setSupplierForm(p => ({ ...p, notes: e.target.value }))}
                 rows={2}
@@ -409,10 +409,10 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSupplierDialog(false)} disabled={isPending}>
-              Cancelar
+              Cancel
             </Button>
             <Button onClick={handleSaveSupplier} disabled={isPending}>
-              {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando…</> : 'Guardar'}
+              {isPending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : 'Save'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -422,21 +422,21 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
       <Dialog open={purchaseDialog} onOpenChange={setPurchaseDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Registrar Compra</DialogTitle>
+            <DialogTitle>Record Purchase</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
 
             {/* Header fields */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Proveedor</Label>
+                <Label>Supplier</Label>
                 <Select
                   value={purchaseForm.supplier_id}
                   onValueChange={v => setPurchaseForm(p => ({ ...p, supplier_id: v }))}
                 >
-                  <SelectTrigger><SelectValue placeholder="Sin proveedor" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="No supplier" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Sin proveedor</SelectItem>
+                    <SelectItem value="">No supplier</SelectItem>
                     {suppliers.map(s => (
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
@@ -444,7 +444,7 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Fecha</Label>
+                <Label>Date</Label>
                 <Input
                   type="date"
                   value={purchaseForm.purchase_date}
@@ -454,17 +454,17 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Nro. Factura / Remisión</Label>
+                <Label>Invoice / Receipt No.</Label>
                 <Input
-                  placeholder="FAC-001"
+                  placeholder="INV-001"
                   value={purchaseForm.invoice_number}
                   onChange={e => setPurchaseForm(p => ({ ...p, invoice_number: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Notas</Label>
+                <Label>Notes</Label>
                 <Input
-                  placeholder="Observaciones…"
+                  placeholder="Notes…"
                   value={purchaseForm.notes}
                   onChange={e => setPurchaseForm(p => ({ ...p, notes: e.target.value }))}
                 />
@@ -476,18 +476,18 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
             {/* Lines */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Ítems comprados</Label>
+                <Label>Items purchased</Label>
                 <Button type="button" variant="outline" size="sm" onClick={addLine}>
-                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Agregar ítem
+                  <Plus className="h-3.5 w-3.5 mr-1.5" /> Add item
                 </Button>
               </div>
 
               {/* Column headers */}
               <div className="grid grid-cols-[1fr_80px_110px_80px_90px_32px] gap-2 text-xs text-muted-foreground px-1">
-                <span>Ítem</span>
-                <span>Cantidad</span>
-                <span>Costo x caja</span>
-                <span>Unid/caja</span>
+                <span>Item</span>
+                <span>Quantity</span>
+                <span>Cost per box</span>
+                <span>Units/box</span>
                 <span className="text-right">Subtotal</span>
                 <span />
               </div>
@@ -508,7 +508,7 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
                       }}
                     >
                       <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Seleccionar…" />
+                        <SelectValue placeholder="Select…" />
                       </SelectTrigger>
                       <SelectContent>
                         {inventoryItems.map(i => (
@@ -536,7 +536,7 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
                       value={line.units_per_box}
                       onChange={e => updateLine(idx, { units_per_box: Math.max(1, parseInt(e.target.value) || 1) })}
                     />
-                    <p className="text-sm font-medium text-right">{formatCOP(cl.total_price)}</p>
+                    <p className="text-sm font-medium text-right">{formatUSD(cl.total_price)}</p>
                     <Button
                       type="button" variant="ghost" size="icon"
                       className="h-7 w-7 text-muted-foreground hover:text-red-500"
@@ -551,25 +551,25 @@ export function ComprasClient({ suppliers, purchases, inventoryItems }: Props) {
 
               <div className="flex justify-end pt-1 border-t">
                 <p className="text-sm font-semibold">
-                  Total compra:{' '}
-                  <span className="text-lg text-primary">{formatCOP(purchaseTotal)}</span>
+                  Purchase total:{' '}
+                  <span className="text-lg text-primary">{formatUSD(purchaseTotal)}</span>
                 </p>
               </div>
             </div>
 
             <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground flex items-center gap-2">
               <Package className="h-4 w-4 shrink-0" />
-              Al guardar, las cantidades serán sumadas al inventario automáticamente.
+              When saved, quantities will be automatically added to inventory.
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPurchaseDialog(false)} disabled={isPending}>
-              Cancelar
+              Cancel
             </Button>
             <Button onClick={handleSavePurchase} disabled={isPending}>
               {isPending
-                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando…</>
-                : 'Registrar Compra'}
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</>
+                : 'Record Purchase'}
             </Button>
           </DialogFooter>
         </DialogContent>

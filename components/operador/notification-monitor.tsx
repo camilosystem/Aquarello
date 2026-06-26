@@ -35,7 +35,7 @@ export function NotificationMonitor() {
         if (inventory) {
           const low = inventory.filter((i: any) => (i.quantity ?? 0) <= (i.min_stock ?? 0))
           if (low.length > 0) {
-            toast.warning('Stock bajo de insumos', {
+            toast.warning('Low inventory stock', {
               description: low.map((i: any) => i.name).join(', '),
               duration: 8000,
             })
@@ -51,8 +51,8 @@ export function NotificationMonitor() {
       .channel('notification-monitor')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
         if (settingsRef.current?.notif_new_order) {
-          toast.info('Nuevo pedido recibido', {
-            description: `Código: ${(payload.new as any).qr_code ?? '—'}`,
+          toast.info('New order received', {
+            description: `Code: ${(payload.new as any).qr_code ?? '—'}`,
             duration: 6000,
           })
         }
@@ -61,8 +61,8 @@ export function NotificationMonitor() {
         const newStatus = (payload.new as any).status
         const qr = (payload.new as any).qr_code ?? '—'
         if (settingsRef.current?.notif_order_ready && newStatus === 'listo') {
-          toast.success('Orden lista para entrega', {
-            description: `Código: ${qr}`,
+          toast.success('Order ready for delivery', {
+            description: `Code: ${qr}`,
             duration: 6000,
           })
         }

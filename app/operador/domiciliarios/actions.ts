@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache'
 const getAdmin = () => {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('SUPABASE_SERVICE_ROLE_KEY no está configurado en el servidor')
+  if (!url || !key) throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured on the server')
   return createAdminClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
@@ -21,7 +21,7 @@ export async function createDomiciliarioAction(data: {
     const admin = getAdmin()
 
     if (data.password.length < 8) {
-      return { ok: false, error: 'La contraseña debe tener al menos 8 caracteres' }
+      return { ok: false, error: 'Password must be at least 8 characters' }
     }
 
     const { data: authData, error: authError } = await admin.auth.admin.createUser({
@@ -38,7 +38,7 @@ export async function createDomiciliarioAction(data: {
       email: data.email.trim(),
       full_name: data.full_name.trim(),
       phone: data.phone.trim() || null,
-      city: data.city.trim() || 'Bogotá',
+      city: data.city.trim() || 'Jackson Heights',
       role: 'domiciliario',
       is_active: true,
     })
@@ -83,7 +83,7 @@ export async function changePasswordDomiciliarioAction(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     if (newPassword.length < 8) {
-      return { ok: false, error: 'La contraseña debe tener al menos 8 caracteres' }
+      return { ok: false, error: 'Password must be at least 8 characters' }
     }
     const admin = getAdmin()
     const { error } = await admin.auth.admin.updateUserById(id, { password: newPassword })

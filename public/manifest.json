@@ -1,11 +1,11 @@
 {
-  "name": "Lavva - Lavanderia a Domicilio",
-  "short_name": "Lavva",
-  "description": "Servicio de lavanderia profesional a domicilio en Colombia",
+  "name": "Aquarello - Laundry Pickup & Delivery",
+  "short_name": "Aquarello",
+  "description": "Professional laundry pickup and delivery service in New York",
   "start_url": "/cliente",
   "display": "standalone",
-  "background_color": "#f0f9ff",
-  "theme_color": "#0891b2",
+  "background_color": "#f0fdf0",
+  "theme_color": "#63c91e",
   "orientation": "portrait",
   "icons": [
     {
@@ -22,6 +22,6 @@
     }
   ],
   "categories": ["lifestyle", "utilities"],
-  "lang": "es-CO",
+  "lang": "en-US",
   "dir": "ltr"
 }

@@ -22,7 +22,7 @@ export async function POST() {
         full_name TEXT,
         phone TEXT,
         address TEXT,
-        city TEXT DEFAULT 'Bogotá',
+        city TEXT DEFAULT 'New York',
         role TEXT NOT NULL DEFAULT 'cliente' CHECK (role IN ('cliente', 'domiciliario', 'operador', 'conductor', 'admin')),
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -192,7 +192,7 @@ export async function POST() {
       // Tables don't exist - this is expected for new setup
       return NextResponse.json({ 
         success: false, 
-        message: 'Las tablas no existen aún. Por favor ejecuta el script SQL manualmente en Supabase.',
+        message: 'The tables do not exist yet. Please run the SQL script manually in Supabase.',
         sql: createTablesSQL
       });
     }
@@ -206,28 +206,28 @@ export async function POST() {
     if (!pricingData || pricingData.length === 0) {
       await supabase.from('pricing').insert([
         {
-          name: 'Lavado Estándar',
-          description: 'Lavado, secado y doblado básico',
-          price_per_kg: 8000,
+          name: 'Standard Wash',
+          description: 'Basic wash, dry, and fold',
+          price_per_kg: 1.75,
           additional_services: {
-            planchado: 3000,
-            suavizante_premium: 2000,
-            blanqueador: 1500,
-            desengrasante: 2500,
-            tratamiento_manchas: 4000
+            planchado: 3,
+            suavizante_premium: 1.50,
+            blanqueador: 1.25,
+            desengrasante: 2,
+            tratamiento_manchas: 3
           },
           is_active: true
         },
         {
-          name: 'Lavado Premium',
-          description: 'Lavado premium con cuidado especial',
-          price_per_kg: 12000,
+          name: 'Premium Wash',
+          description: 'Premium wash with special care',
+          price_per_kg: 2.50,
           additional_services: {
-            planchado: 2500,
-            suavizante_premium: 1500,
-            blanqueador: 1000,
-            desengrasante: 2000,
-            tratamiento_manchas: 3000
+            planchado: 3,
+            suavizante_premium: 1.50,
+            blanqueador: 1.25,
+            desengrasante: 2,
+            tratamiento_manchas: 3
           },
           is_active: true
         }
@@ -242,19 +242,19 @@ export async function POST() {
 
     if (!inventoryData || inventoryData.length === 0) {
       await supabase.from('inventory').insert([
-        { name: 'Detergente Líquido', category: 'detergentes', quantity: 50, unit: 'litros', min_stock: 10, cost_per_unit: 15000 },
-        { name: 'Suavizante', category: 'suavizantes', quantity: 40, unit: 'litros', min_stock: 8, cost_per_unit: 12000 },
-        { name: 'Blanqueador', category: 'blanqueadores', quantity: 30, unit: 'litros', min_stock: 5, cost_per_unit: 8000 },
-        { name: 'Desengrasante', category: 'desengrasantes', quantity: 20, unit: 'litros', min_stock: 5, cost_per_unit: 18000 },
-        { name: 'Quitamanchas', category: 'tratamientos', quantity: 15, unit: 'litros', min_stock: 3, cost_per_unit: 25000 },
-        { name: 'Fragancia Lavanda', category: 'fragancias', quantity: 10, unit: 'litros', min_stock: 2, cost_per_unit: 20000 },
-        { name: 'Fragancia Floral', category: 'fragancias', quantity: 10, unit: 'litros', min_stock: 2, cost_per_unit: 20000 },
+        { name: 'Liquid Detergent', category: 'detergentes', quantity: 50, unit: 'liters', min_stock: 10, cost_per_unit: 4 },
+        { name: 'Fabric Softener', category: 'suavizantes', quantity: 40, unit: 'liters', min_stock: 8, cost_per_unit: 5 },
+        { name: 'Bleach', category: 'blanqueadores', quantity: 30, unit: 'liters', min_stock: 5, cost_per_unit: 2 },
+        { name: 'Degreaser', category: 'desengrasantes', quantity: 20, unit: 'liters', min_stock: 5, cost_per_unit: 6 },
+        { name: 'Stain Remover', category: 'tratamientos', quantity: 15, unit: 'liters', min_stock: 3, cost_per_unit: 9 },
+        { name: 'Lavender Fragrance', category: 'fragancias', quantity: 10, unit: 'liters', min_stock: 2, cost_per_unit: 14 },
+        { name: 'Floral Fragrance', category: 'fragancias', quantity: 10, unit: 'liters', min_stock: 2, cost_per_unit: 14 },
       ]);
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Base de datos verificada correctamente'
+      message: 'Database verified successfully'
     });
 
   } catch (error) {

@@ -6,9 +6,9 @@ import { Home, Package, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { href: '/cliente', icon: Home, label: 'Inicio' },
-  { href: '/cliente/pedidos', icon: Package, label: 'Pedidos' },
-  { href: '/cliente/perfil', icon: User, label: 'Perfil' },
+  { href: '/cliente', icon: Home, label: 'Home' },
+  { href: '/cliente/pedidos', icon: Package, label: 'Orders' },
+  { href: '/cliente/perfil', icon: User, label: 'Profile' },
 ]
 
 export function BottomNav() {

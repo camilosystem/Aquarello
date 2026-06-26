@@ -6,7 +6,7 @@ import { Navigation } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-const defaultCenter = { lat: 4.7110, lng: -74.0721 }
+const defaultCenter = { lat: 40.7559, lng: -73.8856 }
 
 interface DeliveryMapProps {
   orders: any[]
@@ -92,8 +92,8 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
   if (loadError) {
     return (
       <div className={cn("flex flex-col items-center justify-center bg-destructive/10 text-destructive text-sm text-center p-4 h-full w-full rounded-lg border border-destructive/20", className)} style={{ minHeight: '300px' }}>
-        <p className="font-bold">Error crítico de Google Maps</p>
-        <p className="text-xs mt-1">Verifica la consola del navegador y tu API Key.</p>
+        <p className="font-bold">Critical Google Maps error</p>
+        <p className="text-xs mt-1">Check the browser console and your API Key.</p>
       </div>
     )
   }
@@ -103,7 +103,7 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
       <div className={cn("flex items-center justify-center bg-muted h-full w-full rounded-lg border", className)} style={{ minHeight: '300px' }}>
         <div className="flex flex-col items-center gap-2">
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-            <p className="text-muted-foreground font-medium text-sm">Cargando Google Maps...</p>
+            <p className="text-muted-foreground font-medium text-sm">Loading Google Maps...</p>
         </div>
       </div>
     )
@@ -136,11 +136,11 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
               strokeWeight: 2,
               strokeColor: "#ffffff",
             }}
-            title="Tu ubicación"
+            title="Your location"
           />
         )}
 
-        {/* -- AQUÍ ARREGLÉ LOS ICONOS FALSOS -- */}
+        {/* -- Pickup/delivery markers -- */}
         {pickupOrders.map((order) => {
           const position = { lat: Number(order.pickup_lat), lng: Number(order.pickup_lng) }
           return (
@@ -178,26 +178,26 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
           >
             <div className="p-1 max-w-[200px] text-foreground">
               <div className={cn(
-                "font-bold text-sm mb-1", 
+                "font-bold text-sm mb-1",
                 selectedOrder.type === 'pickup' ? "text-blue-600" : "text-green-600"
               )}>
-                {selectedOrder.type === 'pickup' ? 'Recogida' : 'Entrega'}
+                {selectedOrder.type === 'pickup' ? 'Pickup' : 'Delivery'}
               </div>
               <div className="font-medium mb-1">
-                {selectedOrder.cliente?.full_name || 'Cliente'}
+                {selectedOrder.cliente?.full_name || 'Client'}
               </div>
               <div className="text-xs text-muted-foreground mb-2 line-clamp-2">
                 {selectedOrder.type === 'pickup' ? selectedOrder.pickup_address : selectedOrder.delivery_address}
               </div>
-              
-              {/* -- AQUÍ ARREGLÉ EL ENLACE PARA ABRIR LA RUTA EN GOOGLE MAPS -- */}
-              <a 
+
+              {/* -- Link to open the route in Google Maps -- */}
+              <a
                 href={`https://www.google.com/maps/dir/?api=1&destination=${selectedOrder.position.lat},${selectedOrder.position.lng}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-white bg-blue-600 px-3 py-1.5 rounded block text-center mt-2 hover:bg-blue-700 font-medium"
               >
-                Trazar ruta
+                Get directions
               </a>
             </div>
           </InfoWindow>
@@ -218,11 +218,11 @@ export function DeliveryMap({ orders, currentLocation, onOrderClick, className }
         <div className="space-y-2 text-xs font-medium">
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-blue-500" />
-            <span>Recogidas ({pickupOrders.length})</span>
+            <span>Pickups ({pickupOrders.length})</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-green-500" />
-            <span>Entregas ({deliveryOrders.length})</span>
+            <span>Deliveries ({deliveryOrders.length})</span>
           </div>
         </div>
       </div>

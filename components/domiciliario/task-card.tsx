@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { formatDistanceToNow } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import { 
   MapPin, Phone, QrCode, Navigation, CheckCircle2, Scale, 
   Loader2, ChevronDown, ChevronUp, User, Truck, Store, RotateCcw, Lock, PackageCheck, AlertTriangle
@@ -43,14 +43,14 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [weight, setWeight] = useState('')
   
-  // Estados para el código de seguridad
+  // Security code states
   const [showCodePrompt, setShowCodePrompt] = useState(false)
   const [securityCode, setSecurityCode] = useState('')
 
   const isPickup = type === 'pickup'
   const address = isPickup ? order.pickup_address : (order.delivery_address || order.pickup_address)
-  
-  const customerName = order.cliente?.full_name || 'Cliente sin nombre'
+
+  const customerName = order.cliente?.full_name || 'No name'
   const customerPhone = order.cliente?.phone || ''
 
   const handleNavigate = () => {
@@ -66,7 +66,7 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
 
   const handlePickup = async () => {
     if (!weight || parseFloat(weight) <= 0) {
-      toast.error('Ingresa el peso de la bolsa')
+      toast.error('Enter the bag weight')
       return
     }
     setLoading(true)
@@ -87,13 +87,13 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
       await supabase.from('order_history').insert({
         order_id: order.id,
         status: 'recogido',
-        notes: `Recogido por domiciliario. Peso: ${weight} kg`,
+        notes: `Picked up by driver. Weight: ${weight} lb`,
         changed_by: user?.id,
       })
-      toast.success('Recogida completada')
+      toast.success('Pickup completed')
       onUpdate?.()
     } catch (error: any) {
-      toast.error(`Error: ${error.message || 'Error al procesar la recogida'}`)
+      toast.error(`Error: ${error.message || 'Error processing the pickup'}`)
     } finally {
       setLoading(false)
     }
@@ -121,26 +121,26 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
       setSecurityCode('')
       onUpdate?.()
     } catch (error: any) {
-      toast.error('Error al actualizar el estado')
+      toast.error('Error updating status')
     } finally {
       setLoading(false)
     }
   }
 
-  // --- LÓGICA DE VALIDACIÓN DEL CÓDIGO ---
+  // --- CODE VALIDATION LOGIC ---
   const handleVerifyCodeAndDeliver = async () => {
     if (!securityCode || securityCode.length !== 6) {
-      toast.error('El código debe tener 6 dígitos')
+      toast.error('The code must have 6 digits')
       return
     }
 
     if (securityCode !== order.reception_code) {
-      toast.error('Código incorrecto. Pídele el código correcto al operador.')
+      toast.error('Incorrect code. Ask the operator for the correct code.')
       return
     }
 
-    // Si el código es correcto, marcamos como "en_deposito"
-    await handleUpdateStatus('en_deposito' as OrderStatus, 'Bolsa entregada exitosamente al Operador', 'Entregada en depósito mediante código de seguridad')
+    // If the code is correct, mark as "en_deposito"
+    await handleUpdateStatus('en_deposito' as OrderStatus, 'Bag delivered successfully to the Operator', 'Delivered to facility via security code')
   }
 
   return (
@@ -151,10 +151,10 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
                 <Badge variant="outline" className={isPickup ? 'border-primary text-primary bg-primary/5' : 'border-green-500 text-green-600 bg-green-500/5'}>
-                  {isPickup ? 'Recogida' : 'Entrega'}
+                  {isPickup ? 'Pickup' : 'Delivery'}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(order.created_at), { addSuffix: true, locale: es })}
+                  {formatDistanceToNow(new Date(order.created_at), { addSuffix: true, locale: enUS })}
                 </span>
               </div>
               
@@ -184,7 +184,7 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
           <div className="flex gap-2 mt-4">
             <Button variant="outline" size="sm" className="flex-1" onClick={handleNavigate}>
               <Navigation className="mr-2 h-4 w-4" />
-              Navegar
+              Navigate
             </Button>
             {customerPhone && (
               <Button variant="outline" size="sm" onClick={() => window.open(`tel:${customerPhone}`, '_self')}>
@@ -200,15 +200,15 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
             <div className="mt-4 pt-4 border-t space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-muted-foreground">Estado Actual:</span>
+                  <span className="text-muted-foreground">Current Status:</span>
                   <p className="font-medium capitalize text-primary">
                     {STATUS_LABELS[order.status as OrderStatus] || order.status.replace('_', ' ')}
                   </p>
                 </div>
                 {order.actual_weight && (
                   <div>
-                    <span className="text-muted-foreground">Peso:</span>
-                    <p className="font-medium">{order.actual_weight} kg</p>
+                    <span className="text-muted-foreground">Weight:</span>
+                    <p className="font-medium">{order.actual_weight} lb</p>
                   </div>
                 )}
               </div>
@@ -220,82 +220,82 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                       <div className="space-y-2">
                         <Label htmlFor={`weight-${order.id}`} className="flex items-center gap-2">
                           <Scale className="h-4 w-4" />
-                          Peso total al recoger (kg)
+                          Total weight at pickup (kg)
                         </Label>
                         <Input
                           id={`weight-${order.id}`}
                           type="number"
                           step="0.1"
                           min="0"
-                          placeholder="Ej: 3.5"
+                          placeholder="E.g.: 3.5"
                           value={weight}
                           onChange={(e) => setWeight(e.target.value)}
                         />
                       </div>
                       <Button className="w-full" onClick={handlePickup} disabled={loading}>
                         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                        Confirmar Recogida
+                        Confirm Pickup
                       </Button>
                     </>
                   )}
 
-                  {/* Acciones para Recogido y En Tránsito */}
+                  {/* Actions for Picked Up and In Transit */}
                   {(order.status === 'recogido' || order.status === 'en_transito') && (
                     <div className="flex flex-col gap-2 pt-2 border-t border-dashed">
-                      <p className="text-xs text-muted-foreground mb-1 text-center">Fase de traslado a lavandería</p>
-                      
+                      <p className="text-xs text-muted-foreground mb-1 text-center">Transit to laundry phase</p>
+
                       {order.status === 'recogido' && (
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="w-full bg-orange-50 hover:bg-orange-100 hover:text-orange-700 text-orange-600 border-orange-200"
-                          onClick={() => handleUpdateStatus('en_transito' as OrderStatus, 'Orden marcada en tránsito', 'Domiciliario en camino hacia la lavandería')}
+                          onClick={() => handleUpdateStatus('en_transito' as OrderStatus, 'Order marked in transit', 'Driver on the way to the laundry')}
                           disabled={loading}
                         >
-                          <Truck className="mr-2 h-4 w-4" /> Marcar "En Tránsito"
+                          <Truck className="mr-2 h-4 w-4" /> Mark &quot;In Transit&quot;
                         </Button>
                       )}
 
-                      {/* Botón de entregar en lavandería, con lógica de candado */}
+                      {/* Deliver-to-laundry button with lock logic */}
                       {showCodePrompt ? (
                         <div className="p-3 bg-muted rounded-lg border space-y-3 animate-in fade-in slide-in-from-top-2">
                           <Label className="text-xs text-center block text-indigo-600 font-bold flex items-center justify-center gap-1">
-                            <Lock className="w-3 h-3" /> Pide el código al operador
+                            <Lock className="w-3 h-3" /> Ask the operator for the code
                           </Label>
                           <Input
                             type="text"
                             maxLength={6}
-                            placeholder="Ej: 123456"
+                            placeholder="E.g.: 123456"
                             className="text-center font-mono tracking-widest text-lg"
                             value={securityCode}
-                            onChange={(e) => setSecurityCode(e.target.value.replace(/\D/g, ''))} // Solo números
+                            onChange={(e) => setSecurityCode(e.target.value.replace(/\D/g, ''))} // Numbers only
                           />
                           <div className="flex gap-2">
                             <Button variant="ghost" className="flex-1" onClick={() => setShowCodePrompt(false)}>
-                              Cancelar
+                              Cancel
                             </Button>
                             <Button className="flex-1 bg-indigo-600 hover:bg-indigo-700" onClick={handleVerifyCodeAndDeliver} disabled={loading}>
-                              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verificar'}
+                              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
                             </Button>
                           </div>
                         </div>
                       ) : (
-                        <Button 
+                        <Button
                           className="w-full bg-indigo-600 hover:bg-indigo-700"
                           onClick={() => setShowCodePrompt(true)}
                           disabled={loading}
                         >
-                          <Store className="mr-2 h-4 w-4" /> Entregar en Lavandería (En Depósito)
+                          <Store className="mr-2 h-4 w-4" /> Deliver to Laundry (At Facility)
                         </Button>
                       )}
 
-                      {/* Si está en tránsito, también puede deshacer el error si aún no ha metido el código */}
+                      {/* If in transit, can also undo the action if the code hasn't been entered yet */}
                       {order.status === 'en_transito' && !showCodePrompt && (
-                        <Button 
+                        <Button
                           variant="ghost" size="sm" className="text-muted-foreground mt-2"
-                          onClick={() => handleUpdateStatus('recogido' as OrderStatus, 'Estado revertido a recogido', 'El domiciliario deshizo el estado "En Tránsito"')}
+                          onClick={() => handleUpdateStatus('recogido' as OrderStatus, 'Status reverted to picked up', 'Driver undid the "In Transit" status')}
                           disabled={loading}
                         >
-                          <RotateCcw className="mr-2 h-4 w-4" /> Deshacer "En Tránsito"
+                          <RotateCcw className="mr-2 h-4 w-4" /> Undo &quot;In Transit&quot;
                         </Button>
                       )}
                     </div>
@@ -311,13 +311,13 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                       <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
                         <PackageCheck className="h-4 w-4 text-green-600 shrink-0" />
                         <p className="text-xs text-green-700 font-medium">
-                          Lista para entrega. Confirma cuando el cliente reciba su ropa.
+                          Ready for delivery. Confirm once the client receives their laundry.
                         </p>
                       </div>
 
-                      {/* Pago */}
+                      {/* Payment */}
                       <div className="flex items-center justify-between p-2 bg-muted/40 rounded-lg border">
-                        <span className="text-xs text-muted-foreground font-medium">Cobro al cliente</span>
+                        <span className="text-xs text-muted-foreground font-medium">Charge to client</span>
                         <PaymentButton
                           orderId={order.id}
                           orderAmount={order.final_price ?? order.estimated_price ?? null}
@@ -332,8 +332,8 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                             disabled={loading}
                           >
                             {loading
-                              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Procesando...</>
-                              : <><CheckCircle2 className="mr-2 h-4 w-4" /> Confirmar Entrega Final</>
+                              ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
+                              : <><CheckCircle2 className="mr-2 h-4 w-4" /> Confirm Final Delivery</>
                             }
                           </Button>
                         </AlertDialogTrigger>
@@ -341,19 +341,19 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                           <AlertDialogHeader>
                             <AlertDialogTitle className="flex items-center gap-2">
                               <AlertTriangle className="h-5 w-5 text-amber-500" />
-                              ¿Confirmar entrega final?
+                              Confirm final delivery?
                             </AlertDialogTitle>
                             <AlertDialogDescription className="space-y-2">
                               <p>
-                                Estás a punto de marcar la orden <strong>{formatOrderNumber((order as any).order_number)}</strong> como <strong>entregada</strong>.
+                                You are about to mark order <strong>{formatOrderNumber((order as any).order_number)}</strong> as <strong>delivered</strong>.
                               </p>
                               <p className="text-sm">
-                                Esta acción es irreversible. Asegúrate de que el cliente ha recibido su ropa en buen estado.
+                                This action is irreversible. Make sure the client has received their laundry in good condition.
                               </p>
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
                               className="bg-green-600 hover:bg-green-700"
                               onClick={async () => {
@@ -374,20 +374,20 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                                   await supabase.from('order_history').insert({
                                     order_id: order.id,
                                     status: 'entregado',
-                                    notes: 'Entrega final confirmada por domiciliario.',
+                                    notes: 'Final delivery confirmed by driver.',
                                     changed_by: user?.id,
                                   })
 
-                                  toast.success('¡Entrega confirmada! Orden completada.')
+                                  toast.success('Delivery confirmed! Order completed.')
                                   onUpdate?.()
                                 } catch (e: any) {
-                                  toast.error(`Error: ${e.message || 'Error al confirmar entrega'}`)
+                                  toast.error(`Error: ${e.message || 'Error confirming delivery'}`)
                                 } finally {
                                   setLoading(false)
                                 }
                               }}
                             >
-                              Sí, confirmar entrega
+                              Yes, confirm delivery
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -398,7 +398,7 @@ export function TaskCard({ order, type, onUpdate }: TaskCardProps) {
                   {order.status === 'entregado' && (
                     <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
                       <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      <p className="text-sm font-medium text-green-700">Entrega completada ✓</p>
+                      <p className="text-sm font-medium text-green-700">Delivery completed ✓</p>
                     </div>
                   )}
                 </div>

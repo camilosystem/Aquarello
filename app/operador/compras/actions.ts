@@ -17,7 +17,7 @@ type SupplierInput = {
 export async function createSupplierAction(data: SupplierInput): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const supabase = await createClient()
-    if (!supabase) return { ok: false, error: 'Error de configuración del servidor' }
+    if (!supabase) return { ok: false, error: 'Server configuration error' }
     const { error } = await supabase.from('suppliers').insert({
       name: data.name.trim(),
       contact_name: data.contact_name.trim() || null,
@@ -38,7 +38,7 @@ export async function createSupplierAction(data: SupplierInput): Promise<{ ok: t
 export async function updateSupplierAction(id: string, data: SupplierInput): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const supabase = await createClient()
-    if (!supabase) return { ok: false, error: 'Error de configuración del servidor' }
+    if (!supabase) return { ok: false, error: 'Server configuration error' }
     const { error } = await supabase.from('suppliers').update({
       name: data.name.trim(),
       contact_name: data.contact_name.trim() || null,
@@ -59,7 +59,7 @@ export async function updateSupplierAction(id: string, data: SupplierInput): Pro
 export async function deleteSupplierAction(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const supabase = await createClient()
-    if (!supabase) return { ok: false, error: 'Error de configuración del servidor' }
+    if (!supabase) return { ok: false, error: 'Server configuration error' }
     const { error } = await supabase.from('suppliers').delete().eq('id', id)
     if (error) return { ok: false, error: error.message }
     revalidatePath('/operador/compras')
@@ -91,9 +91,9 @@ type PurchaseInput = {
 export async function createPurchaseAction(data: PurchaseInput): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   try {
     const supabase = await createClient()
-    if (!supabase) return { ok: false, error: 'Error de configuración del servidor' }
+    if (!supabase) return { ok: false, error: 'Server configuration error' }
 
-    if (data.lines.length === 0) return { ok: false, error: 'Agrega al menos un ítem a la compra' }
+    if (data.lines.length === 0) return { ok: false, error: 'Add at least one item to the purchase' }
 
     const { data: { user } } = await supabase.auth.getUser()
     const total_amount = data.lines.reduce((sum, l) => sum + l.total_price, 0)
@@ -111,7 +111,7 @@ export async function createPurchaseAction(data: PurchaseInput): Promise<{ ok: t
       .select('id')
       .single()
 
-    if (purchaseError || !purchase) return { ok: false, error: purchaseError?.message ?? 'Error al crear compra' }
+    if (purchaseError || !purchase) return { ok: false, error: purchaseError?.message ?? 'Error creating purchase' }
 
     const { error: itemsError } = await supabase.from('purchase_items').insert(
       data.lines.map(l => ({
@@ -158,7 +158,7 @@ export async function createPurchaseAction(data: PurchaseInput): Promise<{ ok: t
 export async function deletePurchaseAction(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const supabase = await createClient()
-    if (!supabase) return { ok: false, error: 'Error de configuración del servidor' }
+    if (!supabase) return { ok: false, error: 'Server configuration error' }
 
     // Reverse inventory increments before deleting
     const { data: items } = await supabase

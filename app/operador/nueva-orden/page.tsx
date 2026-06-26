@@ -45,9 +45,9 @@ export default async function NuevaOrdenPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Nueva Orden</h1>
+              <h1 className="text-2xl font-bold text-foreground">New Order</h1>
               <p className="text-muted-foreground">
-                Registro de cliente sin cuenta — ingresa directamente en planta
+                Walk-in client registration — enter directly at the plant
               </p>
             </div>
           </div>

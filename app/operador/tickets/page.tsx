@@ -23,12 +23,12 @@ import {
 import { formatOrderNumber, type Order } from '@/lib/types'
 
 const STATUS_TABS = [
-  { value: 'all', label: 'Todos' },
-  { value: 'pending', label: 'Pendientes' },
-  { value: 'washing', label: 'Lavando' },
-  { value: 'drying', label: 'Secando' },
-  { value: 'ready', label: 'Listos' },
-  { value: 'completed', label: 'Completados' }
+  { value: 'all', label: 'All' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'washing', label: 'Washing' },
+  { value: 'drying', label: 'Drying' },
+  { value: 'ready', label: 'Ready' },
+  { value: 'completed', label: 'Completed' }
 ]
 
 export default function TicketsPage() {
@@ -143,17 +143,17 @@ export default function TicketsPage() {
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
-      'pendiente': 'Pendiente',
-      'recogido': 'Recogido',
-      'en_bodega': 'En Bodega',
-      'en_transito_lavado': 'En Transito',
-      'en_lavado': 'Lavando',
-      'en_secado': 'Secando',
-      'en_alistamiento': 'Alistando',
-      'en_ruta_entrega': 'En Ruta',
-      'entregado': 'Entregado',
-      'completado': 'Completado',
-      'cancelado': 'Cancelado'
+      'pendiente': 'Pending',
+      'recogido': 'Picked Up',
+      'en_bodega': 'At Warehouse',
+      'en_transito_lavado': 'In Transit',
+      'en_lavado': 'Washing',
+      'en_secado': 'Drying',
+      'en_alistamiento': 'Finishing',
+      'en_ruta_entrega': 'Out for Delivery',
+      'entregado': 'Delivered',
+      'completado': 'Completed',
+      'cancelado': 'Cancelled'
     }
     return labels[status] || status
   }
@@ -176,10 +176,10 @@ export default function TicketsPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-foreground">
-                Gestión de Tickets
+                Ticket Management
               </h1>
               <p className="text-muted-foreground">
-                {filteredOrders.length} pedidos encontrados
+                {filteredOrders.length} orders found
               </p>
             </div>
           </div>
@@ -189,7 +189,7 @@ export default function TicketsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por código QR o dirección..."
+                placeholder="Search by QR code or address..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -197,7 +197,7 @@ export default function TicketsPage() {
             </div>
             <Button variant="outline" className="shrink-0">
               <Filter className="mr-2 h-4 w-4" />
-              Filtrar
+              Filter
             </Button>
           </div>
 
@@ -216,7 +216,7 @@ export default function TicketsPage() {
                 <Card>
                   <CardContent className="py-12 text-center">
                     <Shirt className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p className="text-muted-foreground">No hay pedidos en esta categoría</p>
+                    <p className="text-muted-foreground">No orders in this category</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -239,18 +239,18 @@ export default function TicketsPage() {
                               </div>
                               <div className="flex items-center gap-1 mt-0.5 text-sm font-medium text-foreground">
                                 <User className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span>{order.walk_in_name ?? (order.user_id ? profileNames[order.user_id] : null) ?? 'Sin nombre'}</span>
+                                <span>{order.walk_in_name ?? (order.user_id ? profileNames[order.user_id] : null) ?? 'No name'}</span>
                               </div>
                               <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
                                 {order.weight_kg && (
                                   <span className="flex items-center gap-1">
                                     <Scale className="h-3 w-3" />
-                                    {order.weight_kg} kg
+                                    {order.weight_kg} lb
                                   </span>
                                 )}
                                 <span className="flex items-center gap-1">
                                   <Clock className="h-3 w-3" />
-                                  {new Date(order.created_at).toLocaleDateString('es-CO', {
+                                  {new Date(order.created_at).toLocaleDateString('en-US', {
                                     day: '2-digit',
                                     month: 'short',
                                     hour: '2-digit',

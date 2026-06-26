@@ -67,7 +67,7 @@ export function MachineTimer({
   if (completed) {
     return (
       <div className={cn('flex flex-col items-center gap-1', className)}>
-        <div className="text-xs font-semibold text-green-600 animate-pulse">✓ Listo</div>
+        <div className="text-xs font-semibold text-green-600 animate-pulse">✓ Ready</div>
       </div>
     )
   }

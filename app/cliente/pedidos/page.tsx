@@ -37,9 +37,9 @@ export default async function PedidosPage() {
 
       <main className="flex-1 container px-4 py-6 pb-24">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Mis Pedidos</h1>
+          <h1 className="text-2xl font-bold text-foreground">My Orders</h1>
           <p className="text-muted-foreground">
-            Seguimiento de tus servicios de lavandería
+            Track your laundry service requests
           </p>
         </div>
 

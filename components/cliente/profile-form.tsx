@@ -24,7 +24,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
     fullName: profile?.full_name || '',
     phone: profile?.phone || '',
     address: profile?.address || '',
-    city: profile?.city || 'Bogotá',
+    city: profile?.city || 'Jackson Heights',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,10 +45,10 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
 
       if (error) throw error
 
-      toast.success('Perfil actualizado correctamente')
+      toast.success('Profile updated successfully')
     } catch (error) {
       console.error('Error updating profile:', error)
-      toast.error('Error al actualizar el perfil')
+      toast.error('Error updating profile')
     } finally {
       setLoading(false)
     }
@@ -61,12 +61,12 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
       deferredPrompt.prompt()
       deferredPrompt.userChoice.then((choiceResult: { outcome: string }) => {
         if (choiceResult.outcome === 'accepted') {
-          toast.success('La app se está instalando')
+          toast.success('The app is being installed')
         }
         (window as unknown as { deferredPrompt?: BeforeInstallPromptEvent }).deferredPrompt = undefined
       })
     } else {
-      toast.info('Abre esta página en tu navegador móvil y selecciona "Agregar a pantalla de inicio"')
+      toast.info('Open this page in your mobile browser and select "Add to Home Screen"')
     }
   }
 
@@ -76,10 +76,10 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <User className="h-5 w-5 text-primary" />
-            Información Personal
+            Personal Information
           </CardTitle>
           <CardDescription>
-            Actualiza tus datos de contacto y dirección
+            Update your contact details and address
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -87,7 +87,7 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
             <div className="space-y-2">
               <Label htmlFor="email" className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                Correo electrónico
+                Email
               </Label>
               <Input
                 id="email"
@@ -97,19 +97,19 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
                 className="bg-muted"
               />
               <p className="text-xs text-muted-foreground">
-                El correo no se puede cambiar
+                Email cannot be changed
               </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="fullName" className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
-                Nombre completo
+                Full name
               </Label>
               <Input
                 id="fullName"
                 type="text"
-                placeholder="Juan Pérez"
+                placeholder="John Smith"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 required
@@ -119,12 +119,12 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
             <div className="space-y-2">
               <Label htmlFor="phone" className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-muted-foreground" />
-                Teléfono
+                Phone
               </Label>
               <Input
                 id="phone"
                 type="tel"
-                placeholder="300 123 4567"
+                placeholder="(555) 123-4567"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
@@ -134,11 +134,11 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
             <div className="space-y-2">
               <Label htmlFor="address" className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground" />
-                Dirección principal
+                Primary address
               </Label>
               <Textarea
                 id="address"
-                placeholder="Calle 100 #15-20, Apto 501"
+                placeholder="8201 Northern Blvd, Apt 5"
                 value={formData.address}
                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                 rows={2}
@@ -147,11 +147,11 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="city">Ciudad</Label>
+              <Label htmlFor="city">City</Label>
               <Input
                 id="city"
                 type="text"
-                placeholder="Bogotá"
+                placeholder="Jackson Heights"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 required
@@ -162,12 +162,12 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Guardando...
+                  Saving...
                 </>
               ) : (
                 <>
                   <Save className="mr-2 h-4 w-4" />
-                  Guardar Cambios
+                  Save Changes
                 </>
               )}
             </Button>
@@ -180,24 +180,24 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Download className="h-5 w-5 text-primary" />
-            Instalar Aplicación
+            Install App
           </CardTitle>
           <CardDescription>
-            Instala Lavva en tu dispositivo para un acceso mas rapido
+            Install Aquarello on your device for faster access
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="w-full"
             onClick={handleInstallPWA}
           >
             <Download className="mr-2 h-4 w-4" />
-            Instalar en mi dispositivo
+            Install on my device
           </Button>
           <p className="mt-3 text-xs text-muted-foreground text-center">
-            En Android: Abre en Chrome y selecciona &quot;Agregar a pantalla de inicio&quot;.
-            En iOS: Abre en Safari y toca &quot;Compartir&quot; → &quot;Agregar a inicio&quot;.
+            On Android: Open in Chrome and select &quot;Add to Home screen&quot;.
+            On iOS: Open in Safari and tap &quot;Share&quot; → &quot;Add to Home Screen&quot;.
           </p>
         </CardContent>
       </Card>
@@ -206,8 +206,8 @@ export function ProfileForm({ profile, email }: ProfileFormProps) {
 
       {/* Account info */}
       <div className="text-center text-sm text-muted-foreground space-y-1">
-        <p>Cuenta creada el {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('es-CO') : 'N/A'}</p>
-        <p>Rol: Cliente</p>
+        <p>Account created on {profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US') : 'N/A'}</p>
+        <p>Role: Client</p>
       </div>
     </div>
   )

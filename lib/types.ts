@@ -1,4 +1,4 @@
-// User roles
+﻿// User roles
 export type UserRole = 'cliente' | 'domiciliario' | 'operador' | 'conductor' | 'admin';
 
 // Order status
@@ -239,18 +239,18 @@ export interface Pricing {
 
 // Status label mapping
 export const STATUS_LABELS: Record<OrderStatus, string> = {
-  pendiente: 'Pendiente',
-  recogido: 'Recogido',
-  en_deposito: 'En depósito',
-  en_transito_lavado: 'En tránsito a lavado',
-  en_lavado: 'En lavado',
-  en_secado: 'En secado',
-  en_alistamiento: 'En alistamiento',
-  listo: 'Listo',
-  en_transito_entrega: 'En tránsito a entrega',
-  en_ruta_entrega: 'En ruta de entrega',
-  entregado: 'Entregado',
-  cancelado: 'Cancelado',
+  pendiente: 'Pending',
+  recogido: 'Picked Up',
+  en_deposito: 'At Facility',
+  en_transito_lavado: 'In Transit to Wash',
+  en_lavado: 'Washing',
+  en_secado: 'Drying',
+  en_alistamiento: 'Finishing',
+  listo: 'Ready',
+  en_transito_entrega: 'In Transit for Delivery',
+  en_ruta_entrega: 'Out for Delivery',
+  entregado: 'Delivered',
+  cancelado: 'Cancelled',
 };
 
 // Status colors
@@ -271,17 +271,15 @@ export const STATUS_COLORS: Record<OrderStatus, string> = {
 
 // Fragrance options
 export const FRAGRANCE_OPTIONS = [
-  { value: 'ninguno', label: 'Sin fragancia' },
-  { value: 'lavva',   label: 'Aroma Lavva (notas frescas, limpias y serenas)' },
+  { value: 'ninguno', label: 'No fragrance' },
+  { value: 'lavva',   label: 'Aquarello Scent (fresh, clean, serene notes)' },
 ];
 
-// Format price in COP
-export function formatCOP(amount: number): string {
-  return new Intl.NumberFormat('es-CO', {
+// Format price in USD
+export function formatUSD(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'COP',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    currency: 'USD',
   }).format(amount);
 }
 

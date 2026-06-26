@@ -15,7 +15,7 @@ export async function registerManualPaymentAction(data: {
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const supabase = await createClient()
-    if (!supabase) return { ok: false, error: 'Error de configuración del servidor' }
+    if (!supabase) return { ok: false, error: 'Server configuration error' }
 
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -42,8 +42,8 @@ export async function registerManualPaymentAction(data: {
     if (orderError) return { ok: false, error: orderError.message }
 
     const historyNote = data.mark_as_paid
-      ? `Pago completo: ${data.method} — $${data.amount.toLocaleString('es-CO')}${data.notes ? ` (${data.notes.trim()})` : ''}`
-      : `Abono: ${data.method} — $${data.amount.toLocaleString('es-CO')}${data.notes ? ` (${data.notes.trim()})` : ''}`
+      ? `Full payment: ${data.method} — $${data.amount.toLocaleString('en-US')}${data.notes ? ` (${data.notes.trim()})` : ''}`
+      : `Partial payment: ${data.method} — $${data.amount.toLocaleString('en-US')}${data.notes ? ` (${data.notes.trim()})` : ''}`
 
     await supabase.from('order_history').insert({
       order_id: data.order_id,
@@ -109,7 +109,7 @@ export async function createPayUCheckoutAction(data: {
       params: {
         merchantId,
         accountId,
-        description: `Lavandería Lavva — Orden ${referenceCode}`,
+        description: `Lavandería Aquarello — Orden ${referenceCode}`,
         referenceCode,
         amount: amountStr,
         tax: '0',
@@ -117,7 +117,7 @@ export async function createPayUCheckoutAction(data: {
         currency: 'COP',
         signature,
         test: isTest,
-        buyerEmail: data.buyer_email || 'cliente@lavva.co',
+        buyerEmail: data.buyer_email || 'cliente@aquarello.co',
         responseUrl: `${appUrl}/api/payu/response`,
         confirmationUrl: `${appUrl}/api/webhooks/payu`,
         payuUrl,

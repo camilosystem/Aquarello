@@ -31,10 +31,10 @@ export default async function ClientePage() {
       <main className="flex-1 container px-4 py-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">
-            Solicitar Servicio
+            Request Service
           </h1>
           <p className="text-muted-foreground">
-            Recogemos, lavamos y entregamos tu ropa
+            We pick up, wash, and deliver your laundry
           </p>
         </div>
 

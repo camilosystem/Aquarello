@@ -1,9 +1,9 @@
-'use client'
+﻿'use client'
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,7 +17,7 @@ import {
   Shirt, Clock, CheckCircle2, Loader2, Save
 } from 'lucide-react'
 import { updateClienteAction } from '@/app/operador/clientes/actions'
-import { STATUS_LABELS, STATUS_COLORS, formatCOP, formatOrderNumber, type Order, type Profile } from '@/lib/types'
+import { STATUS_LABELS, STATUS_COLORS, formatUSD, formatOrderNumber, type Order, type Profile } from '@/lib/types'
 
 interface ClienteDetailClientProps {
   cliente: Profile & { operator_notes?: string | null }
@@ -39,7 +39,7 @@ export function ClienteDetailClient({ cliente, orders }: ClienteDetailClientProp
     startTransition(async () => {
       const result = await updateClienteAction(cliente.id, form)
       if (result.ok) {
-        toast.success('Cliente actualizado correctamente')
+        toast.success('Customer updated successfully')
       } else {
         toast.error(`Error: ${result.error}`)
       }
@@ -57,31 +57,31 @@ export function ClienteDetailClient({ cliente, orders }: ClienteDetailClientProp
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">{cliente.full_name ?? 'Sin nombre'}</h1>
+          <h1 className="text-2xl font-bold">{cliente.full_name ?? 'No name'}</h1>
           <p className="text-muted-foreground">{cliente.email}</p>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Datos del cliente */}
+        {/* Customer data */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <User className="h-4 w-4" />
-              Datos del Cliente
+              Customer Data
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Email (no editable) */}
+            {/* Email (not editable) */}
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                <Mail className="h-3 w-3" /> Email (no editable)
+                <Mail className="h-3 w-3" /> Email (not editable)
               </Label>
               <p className="text-sm font-medium bg-muted px-3 py-2 rounded-md">{cliente.email}</p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="d-name">Nombre completo</Label>
+              <Label htmlFor="d-name">Full name</Label>
               <Input
                 id="d-name"
                 value={form.full_name}
@@ -91,7 +91,7 @@ export function ClienteDetailClient({ cliente, orders }: ClienteDetailClientProp
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="d-phone">Teléfono</Label>
+                <Label htmlFor="d-phone">Phone</Label>
                 <Input
                   id="d-phone"
                   value={form.phone}
@@ -99,7 +99,7 @@ export function ClienteDetailClient({ cliente, orders }: ClienteDetailClientProp
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="d-city">Ciudad</Label>
+                <Label htmlFor="d-city">City</Label>
                 <Input
                   id="d-city"
                   value={form.city}
@@ -109,7 +109,7 @@ export function ClienteDetailClient({ cliente, orders }: ClienteDetailClientProp
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="d-address">Dirección</Label>
+              <Label htmlFor="d-address">Address</Label>
               <Input
                 id="d-address"
                 value={form.address}
@@ -120,11 +120,11 @@ export function ClienteDetailClient({ cliente, orders }: ClienteDetailClientProp
             <Separator />
 
             <div className="space-y-2">
-              <Label htmlFor="d-notes">Comentarios y preferencias del operador</Label>
+              <Label htmlFor="d-notes">Operator comments and preferences</Label>
               <Textarea
                 id="d-notes"
                 rows={4}
-                placeholder="Notas internas: preferencias especiales, alergias, instrucciones recurrentes..."
+                placeholder="Internal notes: special preferences, allergies, recurring instructions..."
                 value={form.operator_notes}
                 onChange={(e) => setForm(p => ({ ...p, operator_notes: e.target.value }))}
               />
@@ -132,51 +132,51 @@ export function ClienteDetailClient({ cliente, orders }: ClienteDetailClientProp
 
             <Button className="w-full" onClick={handleSave} disabled={isPending}>
               {isPending
-                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
-                : <><Save className="mr-2 h-4 w-4" />Guardar Cambios</>}
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+                : <><Save className="mr-2 h-4 w-4" />Save Changes</>}
             </Button>
 
             {/* Meta */}
             <div className="text-xs text-muted-foreground flex items-center gap-1 pt-1">
               <Calendar className="h-3 w-3" />
-              Cliente desde {format(new Date(cliente.created_at), "d 'de' MMMM, yyyy", { locale: es })}
+              Customer since {format(new Date(cliente.created_at), "MMMM d, yyyy", { locale: enUS })}
             </div>
           </CardContent>
         </Card>
 
-        {/* Resumen de órdenes */}
+        {/* Order summary */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Shirt className="h-4 w-4" />
-              Resumen
+              Summary
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="bg-muted/50 rounded-lg p-3">
                 <p className="text-2xl font-bold">{orders.length}</p>
-                <p className="text-xs text-muted-foreground">Total órdenes</p>
+                <p className="text-xs text-muted-foreground">Total orders</p>
               </div>
               <div className="bg-blue-50 rounded-lg p-3">
                 <p className="text-2xl font-bold text-blue-700">{activeOrders.length}</p>
-                <p className="text-xs text-muted-foreground">Activas</p>
+                <p className="text-xs text-muted-foreground">Active</p>
               </div>
               <div className="bg-green-50 rounded-lg p-3">
                 <p className="text-2xl font-bold text-green-700">{pastOrders.length}</p>
-                <p className="text-xs text-muted-foreground">Completadas</p>
+                <p className="text-xs text-muted-foreground">Completed</p>
               </div>
             </div>
 
             {orders.length > 0 && (
               <div className="text-sm text-muted-foreground space-y-1 pt-1">
                 <p>
-                  <span className="font-medium text-foreground">Primera orden: </span>
-                  {format(new Date(orders[orders.length - 1].created_at), "d MMM yyyy", { locale: es })}
+                  <span className="font-medium text-foreground">First order: </span>
+                  {format(new Date(orders[orders.length - 1].created_at), "MMM d, yyyy", { locale: enUS })}
                 </p>
                 <p>
-                  <span className="font-medium text-foreground">Última orden: </span>
-                  {format(new Date(orders[0].created_at), "d MMM yyyy", { locale: es })}
+                  <span className="font-medium text-foreground">Last order: </span>
+                  {format(new Date(orders[0].created_at), "MMM d, yyyy", { locale: enUS })}
                 </p>
               </div>
             )}
@@ -184,19 +184,19 @@ export function ClienteDetailClient({ cliente, orders }: ClienteDetailClientProp
         </Card>
       </div>
 
-      {/* Historial de órdenes */}
+      {/* Order history */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Clock className="h-4 w-4" />
-            Historial de Órdenes ({orders.length})
+            Order History ({orders.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {orders.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Shirt className="h-10 w-10 mx-auto mb-2 opacity-40" />
-              <p>Este cliente no tiene órdenes aún</p>
+              <p>This customer has no orders yet</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -214,11 +214,11 @@ export function ClienteDetailClient({ cliente, orders }: ClienteDetailClientProp
                       <p className="text-sm font-semibold">{formatOrderNumber(order.order_number)}</p>
                       <p className="font-mono text-xs text-muted-foreground">{order.qr_code}</p>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                        <span>{format(new Date(order.created_at), "d MMM yyyy", { locale: es })}</span>
-                        {order.weight_kg && <span>{order.weight_kg} kg</span>}
+                        <span>{format(new Date(order.created_at), "MMM d, yyyy", { locale: enUS })}</span>
+                        {order.weight_kg && <span>{order.weight_kg} lb</span>}
                         {(order.final_price || order.estimated_price) && (
                           <span className="font-medium text-foreground">
-                            {formatCOP(order.final_price || order.estimated_price || 0)}
+                            {formatUSD(order.final_price || order.estimated_price || 0)}
                           </span>
                         )}
                       </div>

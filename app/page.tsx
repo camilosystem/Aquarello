@@ -12,8 +12,8 @@ export default function HomePage() {
         <div className="flex flex-col items-center text-center gap-6">
           <div className="rounded-2xl overflow-hidden shadow-2xl">
             <Image
-              src="/logo-lavva.png"
-              alt="Lavva"
+              src="/AquaLogo.jpg"
+              alt="Aquarello"
               width={220}
               height={220}
               className="w-52 h-auto"
@@ -22,7 +22,7 @@ export default function HomePage() {
           </div>
           <div className="space-y-2">
             <p className="text-lg text-muted-foreground max-w-md">
-              Sistema de gestion de lavanderia a domicilio para Colombia
+              Laundry pickup and delivery management system for New York
             </p>
           </div>
         </div>
@@ -35,19 +35,19 @@ export default function HomePage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary mb-2 group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                 <User className="h-6 w-6" />
               </div>
-              <CardTitle>Cliente</CardTitle>
+              <CardTitle>Client</CardTitle>
               <CardDescription>
-                Solicita servicio de lavanderia, haz seguimiento y paga desde tu celular
+                Request laundry service, track your order, and pay from your phone
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Link href="/cliente/login">
                 <Button className="w-full">
-                  Entrar como Cliente
+                  Sign in as Client
                 </Button>
               </Link>
               <p className="mt-3 text-xs text-muted-foreground text-center">
-                PWA instalable en Android/iOS
+                Installable PWA for Android/iOS
               </p>
             </CardContent>
           </Card>
@@ -58,19 +58,19 @@ export default function HomePage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/20 text-foreground mb-2 group-hover:bg-accent group-hover:text-accent-foreground transition-colors">
                 <Bike className="h-6 w-6" />
               </div>
-              <CardTitle>Domiciliario</CardTitle>
+              <CardTitle>Driver</CardTitle>
               <CardDescription>
-                Mapa de rutas, recogida y entrega de bolsas de ropa con tickets
+                Route map, pickup and delivery of laundry bags with tickets
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Link href="/domiciliario/login">
                 <Button variant="outline" className="w-full">
-                  Entrar como Domiciliario
+                  Sign in as Driver
                 </Button>
               </Link>
               <p className="mt-3 text-xs text-muted-foreground text-center">
-                PWA instalable en Android/iOS
+                Installable PWA for Android/iOS
               </p>
             </CardContent>
           </Card>
@@ -81,19 +81,19 @@ export default function HomePage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary text-secondary-foreground mb-2 group-hover:bg-foreground group-hover:text-background transition-colors">
                 <Wrench className="h-6 w-6" />
               </div>
-              <CardTitle>Operador de Lavado</CardTitle>
+              <CardTitle>Laundry Operator</CardTitle>
               <CardDescription>
-                Gestion de lavado, inventario, tiempos y control de calidad
+                Wash management, inventory, timing, and quality control
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Link href="/operador/login">
                 <Button variant="outline" className="w-full">
-                  Entrar como Operador
+                  Sign in as Operator
                 </Button>
               </Link>
               <p className="mt-3 text-xs text-muted-foreground text-center">
-                Interfaz web para escritorio
+                Web interface for desktop
               </p>
             </CardContent>
           </Card>
@@ -104,17 +104,17 @@ export default function HomePage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-muted-foreground mb-2 group-hover:bg-muted-foreground group-hover:text-background transition-colors">
                 <Truck className="h-6 w-6" />
               </div>
-              <CardTitle>Conductor de Camion</CardTitle>
+              <CardTitle>Truck Driver</CardTitle>
               <CardDescription>
-                Transporte de bolsas entre depositos y centro de lavado
+                Transport of bags between warehouses and the laundry facility
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button variant="outline" className="w-full" disabled>
-                Proximamente
+                Coming Soon
               </Button>
               <p className="mt-3 text-xs text-muted-foreground text-center">
-                En desarrollo
+                In development
               </p>
             </CardContent>
           </Card>
@@ -123,34 +123,40 @@ export default function HomePage() {
         {/* Features */}
         <div className="mt-16 text-center">
           <h2 className="text-2xl font-bold text-foreground mb-8">
-            Caracteristicas del Sistema
+            System Features
           </h2>
           <div className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto">
             <div className="space-y-2">
               <div className="text-3xl font-bold text-primary">QR</div>
               <p className="text-sm text-muted-foreground">
-                Codigo QR unico por bolsa para tracking completo
+                Unique QR code per bag for full tracking
               </p>
             </div>
             <div className="space-y-2">
               <div className="text-3xl font-bold text-primary">11</div>
               <p className="text-sm text-muted-foreground">
-                Estados de seguimiento del proceso de lavado
+                Tracking statuses throughout the laundry process
               </p>
             </div>
             <div className="space-y-2">
-              <div className="text-3xl font-bold text-primary">COP</div>
+              <div className="text-3xl font-bold text-primary">USD</div>
               <p className="text-sm text-muted-foreground">
-                Pagos con tarjeta o Nequi en pesos colombianos
+                Card payments in US dollars
               </p>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <footer className="mt-16 text-center text-sm text-muted-foreground border-t pt-8">
-          <p>Lavva - Sistema de Gestion de Lavanderia</p>
-          <p className="mt-1">Servicio para Colombia</p>
+        <footer className="mt-16 text-center text-sm text-muted-foreground border-t pt-8 space-y-1">
+          <p>Aquarello - Laundry Management System</p>
+          <p className="mt-1">Service for New York</p>
+          <p className="mt-3">8201 Northern Blvd, Jackson Heights, NY 11372</p>
+          <p>
+            <a href="tel:+17184339631" className="hover:text-primary">(718) 433-9631</a>
+            {' '}&middot;{' '}
+            <a href="mailto:aquarelonyc@gmail.com" className="hover:text-primary">aquarelonyc@gmail.com</a>
+          </p>
         </footer>
       </div>
     </div>

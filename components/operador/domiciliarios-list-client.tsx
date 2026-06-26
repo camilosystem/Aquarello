@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,7 +25,7 @@ interface DomiciliariosListClientProps {
   domiciliarios: Profile[]
 }
 
-const EMPTY_FORM = { full_name: '', email: '', phone: '', city: 'Bogotá', password: '', confirmPassword: '' }
+const EMPTY_FORM = { full_name: '', email: '', phone: '', city: 'Jackson Heights', password: '', confirmPassword: '' }
 
 export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClientProps) {
   const router = useRouter()
@@ -49,25 +49,25 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
 
   const handleCreate = () => {
     if (!form.full_name.trim() || !form.email.trim()) {
-      toast.error('Nombre y email son obligatorios')
+      toast.error('Name and email are required')
       return
     }
     if (!form.password) {
-      toast.error('La contraseña es obligatoria')
+      toast.error('Password is required')
       return
     }
     if (form.password.length < 8) {
-      toast.error('La contraseña debe tener al menos 8 caracteres')
+      toast.error('Password must be at least 8 characters')
       return
     }
     if (form.password !== form.confirmPassword) {
-      toast.error('Las contraseñas no coinciden')
+      toast.error('Passwords do not match')
       return
     }
     startTransition(async () => {
       const result = await createDomiciliarioAction(form)
       if (result.ok) {
-        toast.success('Domiciliario creado exitosamente')
+        toast.success('Driver created successfully')
         setDialogOpen(false)
         setForm(EMPTY_FORM)
         setShowPassword(false)
@@ -83,22 +83,22 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Domiciliarios</h1>
+          <h1 className="text-2xl font-bold text-foreground">Drivers</h1>
           <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-            <span>{domiciliarios.length} en total</span>
+            <span>{domiciliarios.length} total</span>
             <span className="flex items-center gap-1 text-green-600">
-              <CheckCircle2 className="h-3.5 w-3.5" />{activos} activos
+              <CheckCircle2 className="h-3.5 w-3.5" />{activos} active
             </span>
             {inactivos > 0 && (
               <span className="flex items-center gap-1 text-muted-foreground">
-                <XCircle className="h-3.5 w-3.5" />{inactivos} inactivos
+                <XCircle className="h-3.5 w-3.5" />{inactivos} inactive
               </span>
             )}
           </div>
         </div>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Nuevo Domiciliario
+          New Driver
         </Button>
       </div>
 
@@ -106,7 +106,7 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar por nombre, email o teléfono..."
+          placeholder="Search by name, email, or phone..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10"
@@ -118,7 +118,7 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
         <Card>
           <CardContent className="py-16 text-center text-muted-foreground">
             <Bike className="h-12 w-12 mx-auto mb-3 opacity-40" />
-            <p>{search ? 'No se encontraron domiciliarios' : 'No hay domiciliarios registrados aún'}</p>
+            <p>{search ? 'No drivers found' : 'No drivers registered yet'}</p>
           </CardContent>
         </Card>
       ) : (
@@ -137,12 +137,12 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
                     </div>
                     <div className="space-y-0.5 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold truncate">{dom.full_name ?? 'Sin nombre'}</p>
+                        <p className="font-semibold truncate">{dom.full_name ?? 'No name'}</p>
                         <Badge
                           variant={dom.is_active ? 'default' : 'secondary'}
                           className={dom.is_active ? 'bg-green-100 text-green-800' : ''}
                         >
-                          {dom.is_active ? 'Activo' : 'Inactivo'}
+                          {dom.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">{dom.email}</p>
@@ -157,7 +157,7 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
                             <MapPin className="h-3 w-3" />{dom.city}
                           </span>
                         )}
-                        <span>Desde {format(new Date(dom.created_at), 'MMM yyyy', { locale: es })}</span>
+                        <span>Since {format(new Date(dom.created_at), 'MMM yyyy', { locale: enUS })}</span>
                       </div>
                     </div>
                   </div>
@@ -169,18 +169,18 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
         </div>
       )}
 
-      {/* Dialog crear */}
+      {/* Create dialog */}
       <Dialog open={dialogOpen} onOpenChange={(v) => { setDialogOpen(v); if (!v) { setForm(EMPTY_FORM); setShowPassword(false) } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Nuevo Domiciliario</DialogTitle>
+            <DialogTitle>New Driver</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="d-name">Nombre completo *</Label>
+              <Label htmlFor="d-name">Full name *</Label>
               <Input
                 id="d-name"
-                placeholder="Juan Pérez"
+                placeholder="John Smith"
                 value={form.full_name}
                 onChange={(e) => setForm(p => ({ ...p, full_name: e.target.value }))}
               />
@@ -190,26 +190,26 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
               <Input
                 id="d-email"
                 type="email"
-                placeholder="juan@ejemplo.com"
+                placeholder="john@example.com"
                 value={form.email}
                 onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="d-phone">Teléfono</Label>
+                <Label htmlFor="d-phone">Phone</Label>
                 <Input
                   id="d-phone"
-                  placeholder="3001234567"
+                  placeholder="(555) 123-4567"
                   value={form.phone}
                   onChange={(e) => setForm(p => ({ ...p, phone: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="d-city">Ciudad</Label>
+                <Label htmlFor="d-city">City</Label>
                 <Input
                   id="d-city"
-                  placeholder="Bogotá"
+                  placeholder="Jackson Heights"
                   value={form.city}
                   onChange={(e) => setForm(p => ({ ...p, city: e.target.value }))}
                 />
@@ -217,14 +217,14 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
             </div>
 
             <div className="space-y-3 rounded-lg border p-3">
-              <p className="text-sm font-medium">Credenciales de acceso</p>
+              <p className="text-sm font-medium">Login credentials</p>
               <div className="space-y-2">
-                <Label htmlFor="d-password">Contraseña *</Label>
+                <Label htmlFor="d-password">Password *</Label>
                 <div className="relative">
                   <Input
                     id="d-password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Mínimo 8 caracteres"
+                    placeholder="Minimum 8 characters"
                     value={form.password}
                     onChange={(e) => setForm(p => ({ ...p, password: e.target.value }))}
                     className="pr-10"
@@ -239,28 +239,28 @@ export function DomiciliariosListClient({ domiciliarios }: DomiciliariosListClie
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="d-confirm">Confirmar contraseña *</Label>
+                <Label htmlFor="d-confirm">Confirm password *</Label>
                 <Input
                   id="d-confirm"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Repite la contraseña"
+                  placeholder="Repeat the password"
                   value={form.confirmPassword}
                   onChange={(e) => setForm(p => ({ ...p, confirmPassword: e.target.value }))}
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Comunica estas credenciales al domiciliario para que pueda ingresar a la app.
+                Share these credentials with the driver so they can log in to the app.
               </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isPending}>
-              Cancelar
+              Cancel
             </Button>
             <Button onClick={handleCreate} disabled={isPending}>
               {isPending
-                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creando...</>
-                : 'Crear Domiciliario'}
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</>
+                : 'Create Driver'}
             </Button>
           </DialogFooter>
         </DialogContent>

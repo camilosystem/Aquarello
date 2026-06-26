@@ -1,7 +1,7 @@
 {
-  "name": "Lavva Driver",
-  "short_name": "Lavva Driver",
-  "description": "App exclusiva para el equipo de logística de Lavva",
+  "name": "Aquarello Driver",
+  "short_name": "Aquarello Driver",
+  "description": "Exclusive app for the Aquarello logistics team",
   "start_url": "/domiciliario",
   "display": "standalone",
   "background_color": "#ffffff",

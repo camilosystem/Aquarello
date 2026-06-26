@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { FRAGRANCE_OPTIONS, generateQRCode, formatCOP } from '@/lib/types'
+import { FRAGRANCE_OPTIONS, generateQRCode, formatUSD } from '@/lib/types'
 
 import { useJsApiLoader, GoogleMap, Marker } from '@react-google-maps/api'
 
@@ -52,18 +52,18 @@ const DEFAULT_PREFERENCES: WashingPreferences = {
   notes: '',
 }
 
-const PRICE_PER_KG = 8000
-const MIN_PRICE = 28000
+const PRICE_PER_KG = 3.50
+const MIN_PRICE = 12
 const ADDITIONAL_PRICES = {
-  separateWhites: 3000,
-  separateColors: 3000,
-  softener: 2000,
-  bleach: 1500,
-  degreaser: 2500,
-  stainTreatment: 4000,
+  separateWhites: 1.50,
+  separateColors: 1.50,
+  softener: 1,
+  bleach: 0.75,
+  degreaser: 1.25,
+  stainTreatment: 2,
 }
 
-const DEFAULT_CENTER = { lat: 4.6097, lng: -74.0817 }
+const DEFAULT_CENTER = { lat: 40.7556, lng: -73.8830 }
 
 export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormProps) {
   const router = useRouter()
@@ -96,7 +96,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
 
   const handleOpenMap = () => {
     if (loadError) {
-      toast.error('Error cargando Google Maps. Verifica tu API Key.')
+      toast.error('Error loading Google Maps. Check your API key.')
       return
     }
 
@@ -110,7 +110,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
             lng: position.coords.longitude
           })
         },
-        () => console.warn("GPS denegado, usando centro por defecto."),
+        () => console.warn("GPS denied, using default center."),
         { timeout: 5000 }
       )
     } else if (coordinates) {
@@ -127,7 +127,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
   const handleConfirmLocation = () => {
     setCoordinates(mapCenter)
     setShowMapModal(false)
-    toast.success('Ubicación exacta guardada para el domiciliario')
+    toast.success('Exact location saved for the delivery driver')
   }
 
   const estimatePrice = () => {
@@ -147,15 +147,15 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
 
   const handleContinueToStep2 = () => {
     if (!address.trim()) {
-      toast.error('Por favor ingresa tu dirección escrita')
+      toast.error('Please enter your written address')
       return
     }
     if (!phone.trim() || phone.length < 7) {
-      toast.error('Por favor ingresa un número de teléfono válido')
+      toast.error('Please enter a valid phone number')
       return
     }
     if (!coordinates) {
-      toast.error('Por favor fija tu ubicación en el mapa interactivo')
+      toast.error('Please pin your location on the interactive map')
       return
     }
     setStep(2)
@@ -163,7 +163,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
 
   const handleSubmit = async () => {
     if (!supabase) {
-      toast.error('Error de conexión. Por favor recarga la página.')
+      toast.error('Connection error. Please reload the page.')
       return
     }
 
@@ -214,7 +214,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
       await supabase.from('order_history').insert({
         order_id: order.id,
         status: 'pendiente',
-        notes: 'Pedido creado por el cliente',
+        notes: 'Order created by the client',
         changed_by: userId,
       })
 
@@ -236,25 +236,25 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
           <div className={`h-2 w-32 rounded-full transition-colors ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
         </div>
 
-        {/* Paso 1 — Datos de recogida */}
+        {/* Step 1 — Pickup details */}
         {step === 1 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-primary" />
-                Datos de Recogida
+                Pickup Details
               </CardTitle>
               <CardDescription>
-                ¿A dónde debemos ir y cómo podemos contactarte?
+                Where should we go and how can we reach you?
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
 
               <div className="space-y-2">
-                <Label htmlFor="address">Dirección escrita *</Label>
+                <Label htmlFor="address">Written address *</Label>
                 <Textarea
                   id="address"
-                  placeholder="Ej: Calle 100 #15-20, Conjunto Los Pinos, Apto 501"
+                  placeholder="E.g.: 8201 Northern Blvd, Apt 5B"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   rows={2}
@@ -263,15 +263,15 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
               </div>
 
               <div className="space-y-2">
-                <Label>Ubicación GPS (Para el domiciliario) *</Label>
+                <Label>GPS Location (For the delivery driver) *</Label>
                 {coordinates ? (
                   <div className="flex items-center justify-between p-3 border rounded-md bg-green-50 border-green-200">
                     <div className="flex items-center gap-2 text-green-700">
                       <CheckCircle2 className="h-5 w-5" />
-                      <span className="text-sm font-medium">Ubicación fijada en el mapa</span>
+                      <span className="text-sm font-medium">Location pinned on the map</span>
                     </div>
                     <Button variant="ghost" size="sm" className="text-green-700 hover:text-green-800 hover:bg-green-100" onClick={handleOpenMap}>
-                      Modificar
+                      Edit
                     </Button>
                   </div>
                 ) : (
@@ -283,19 +283,19 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                     disabled={!isLoaded}
                   >
                     <MapPinned className="mr-2 h-4 w-4" />
-                    {isLoaded ? 'Fijar ubicación en el mapa' : 'Cargando componente...'}
+                    {isLoaded ? 'Pin location on the map' : 'Loading component...'}
                   </Button>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Teléfono de contacto *</Label>
+                <Label htmlFor="phone">Contact phone *</Label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="Ej: 3001234567"
+                    placeholder="E.g.: (555) 123-4567"
                     className="pl-9"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -308,99 +308,99 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                 onClick={handleContinueToStep2}
                 disabled={!address.trim() || !phone.trim() || !coordinates}
               >
-                Continuar a preferencias
+                Continue to preferences
               </Button>
             </CardContent>
           </Card>
         )}
 
-        {/* Paso 2 — Preferencias de lavado */}
+        {/* Step 2 — Washing preferences */}
         {step === 2 && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                Preferencias de Lavado
+                Washing Preferences
               </CardTitle>
               <CardDescription>
-                Personaliza cómo quieres que lavemos tu ropa
+                Customize how you want us to wash your laundry
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4">
 
-                {/* Separar ropa blanca */}
+                {/* Separate whites */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
                     <Shirt className="h-5 w-5 text-primary" />
                     <div>
-                      <Label className="text-sm font-medium">Separar ropa blanca</Label>
-                      <p className="text-xs text-muted-foreground">Lavamos por separado tu ropa blanca, toallas y sabanas. (+{formatCOP(ADDITIONAL_PRICES.separateWhites)})</p>
+                      <Label className="text-sm font-medium">Separate whites</Label>
+                      <p className="text-xs text-muted-foreground">We wash your white clothes, towels, and sheets separately. (+{formatUSD(ADDITIONAL_PRICES.separateWhites)})</p>
                     </div>
                   </div>
                   <Switch checked={preferences.separateWhites} onCheckedChange={(c) => handlePreferenceChange('separateWhites', c)} />
                 </div>
 
-                {/* Separar ropa de color */}
+                {/* Separate colors */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
                     <Shirt className="h-5 w-5 text-primary" />
                     <div>
-                      <Label className="text-sm font-medium">Separar ropa de color</Label>
-                      <p className="text-xs text-muted-foreground">Separamos tus prendas: negras con jeans y ropa de color aparte. (+{formatCOP(ADDITIONAL_PRICES.separateColors)})</p>
+                      <Label className="text-sm font-medium">Separate colors</Label>
+                      <p className="text-xs text-muted-foreground">We separate your garments: dark with jeans and colored clothes apart. (+{formatUSD(ADDITIONAL_PRICES.separateColors)})</p>
                     </div>
                   </div>
                   <Switch checked={preferences.separateColors} onCheckedChange={(c) => handlePreferenceChange('separateColors', c)} />
                 </div>
 
-                {/* Suavizante */}
+                {/* Softener */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
                     <Droplets className="h-5 w-5 text-primary" />
                     <div>
-                      <Label className="text-sm font-medium">Aplicar suavizante</Label>
-                      <p className="text-xs text-muted-foreground">Deja tu ropa suave y fresca (+{formatCOP(ADDITIONAL_PRICES.softener)})</p>
+                      <Label className="text-sm font-medium">Add fabric softener</Label>
+                      <p className="text-xs text-muted-foreground">Leaves your clothes soft and fresh (+{formatUSD(ADDITIONAL_PRICES.softener)})</p>
                     </div>
                   </div>
                   <Switch checked={preferences.useSoftener} onCheckedChange={(c) => handlePreferenceChange('useSoftener', c)} />
                 </div>
 
-                {/* Aplicar Oxígeno Activo */}
+                {/* Active Oxygen */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
                     <Sparkles className="h-5 w-5 text-primary" />
                     <div>
-                      <Label className="text-sm font-medium">Aplicar Oxígeno Activo</Label>
+                      <Label className="text-sm font-medium">Add Active Oxygen</Label>
                       <p className="text-xs text-muted-foreground">
-                        Intensifica y realza colores, ayuda a desmanchar y controla bacterias. (+{formatCOP(ADDITIONAL_PRICES.bleach)})
+                        Intensifies and brightens colors, helps remove stains, and controls bacteria. (+{formatUSD(ADDITIONAL_PRICES.bleach)})
                       </p>
                     </div>
                   </div>
                   <Switch checked={preferences.useBleach} onCheckedChange={(c) => handlePreferenceChange('useBleach', c)} />
                 </div>
 
-                {/* Desengrasante */}
+                {/* Degreaser */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
                     <Wind className="h-5 w-5 text-primary" />
                     <div>
-                      <Label className="text-sm font-medium">Aplicar desengrasante</Label>
-                      <p className="text-xs text-muted-foreground">Ideal para ropa de trabajo (+{formatCOP(ADDITIONAL_PRICES.degreaser)} por carga)</p>
+                      <Label className="text-sm font-medium">Add degreaser</Label>
+                      <p className="text-xs text-muted-foreground">Ideal for work clothes (+{formatUSD(ADDITIONAL_PRICES.degreaser)} per load)</p>
                     </div>
                   </div>
                   <Switch checked={preferences.useDegreaser} onCheckedChange={(c) => handlePreferenceChange('useDegreaser', c)} />
                 </div>
 
-                {/* Tratamiento de manchas — contador */}
+                {/* Stain treatment — counter */}
                 <div className="flex items-center justify-between rounded-lg border p-4">
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="h-5 w-5 text-primary" />
                     <div>
-                      <Label className="text-sm font-medium">Tratamiento de manchas</Label>
+                      <Label className="text-sm font-medium">Stain treatment</Label>
                       <p className="text-xs text-muted-foreground">
                         {preferences.stainCount > 0
-                          ? `${preferences.stainCount} mancha${preferences.stainCount > 1 ? 's' : ''} (+${formatCOP(preferences.stainCount * ADDITIONAL_PRICES.stainTreatment)})`
-                          : `+${formatCOP(ADDITIONAL_PRICES.stainTreatment)} por mancha`}
+                          ? `${preferences.stainCount} stain${preferences.stainCount > 1 ? 's' : ''} (+${formatUSD(preferences.stainCount * ADDITIONAL_PRICES.stainTreatment)})`
+                          : `+${formatUSD(ADDITIONAL_PRICES.stainTreatment)} per stain`}
                       </p>
                     </div>
                   </div>
@@ -428,14 +428,14 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
 
               </div>
 
-              {/* Fragancia */}
+              {/* Fragrance */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Palette className="h-5 w-5 text-primary" />
-                  <Label>Fragancia</Label>
+                  <Label>Fragrance</Label>
                 </div>
                 <Select value={preferences.fragrance} onValueChange={(v) => handlePreferenceChange('fragrance', v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecciona una fragancia" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select a fragrance" /></SelectTrigger>
                   <SelectContent>
                     {FRAGRANCE_OPTIONS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
@@ -444,82 +444,82 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
                 </Select>
               </div>
 
-              {/* Instrucciones especiales */}
+              {/* Special instructions */}
               <div className="space-y-2">
-                <Label htmlFor="notes">Instrucciones especiales (opcional)</Label>
+                <Label htmlFor="notes">Special instructions (optional)</Label>
                 <Textarea
                   id="notes"
-                  placeholder="Ej: Hay una camisa con mancha de vino..."
+                  placeholder="E.g.: There's a shirt with a wine stain..."
                   value={preferences.notes}
                   onChange={(e) => handlePreferenceChange('notes', e.target.value)}
                   rows={3}
                 />
               </div>
 
-              {/* Resumen */}
+              {/* Summary */}
               <div className="rounded-lg bg-muted/50 p-4 space-y-3">
-                <h4 className="font-semibold">Resumen del pedido</h4>
+                <h4 className="font-semibold">Order summary</h4>
                 <div className="text-sm space-y-1">
-                  <p className="text-muted-foreground"><span className="font-medium text-foreground">Dirección:</span> {address}</p>
-                  <p className="text-muted-foreground"><span className="font-medium text-foreground">Teléfono:</span> {phone}</p>
+                  <p className="text-muted-foreground"><span className="font-medium text-foreground">Address:</span> {address}</p>
+                  <p className="text-muted-foreground"><span className="font-medium text-foreground">Phone:</span> {phone}</p>
                   <div className="border-t pt-2 mt-2 space-y-1">
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Precio por kg:</span>
-                      <span>{formatCOP(PRICE_PER_KG)}</span>
+                      <span>Price per lb:</span>
+                      <span>{formatUSD(PRICE_PER_KG)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span>Pedido mínimo (3 kg):</span>
-                      <span>{formatCOP(MIN_PRICE)}</span>
+                      <span>Minimum order (10 lb):</span>
+                      <span>{formatUSD(MIN_PRICE)}</span>
                     </div>
                     {preferences.separateWhites && (
                       <div className="flex justify-between">
-                        <span>Separar ropa blanca:</span>
-                        <span>+{formatCOP(ADDITIONAL_PRICES.separateWhites)}</span>
+                        <span>Separate whites:</span>
+                        <span>+{formatUSD(ADDITIONAL_PRICES.separateWhites)}</span>
                       </div>
                     )}
                     {preferences.separateColors && (
                       <div className="flex justify-between">
-                        <span>Separar ropa de color:</span>
-                        <span>+{formatCOP(ADDITIONAL_PRICES.separateColors)}</span>
+                        <span>Separate colors:</span>
+                        <span>+{formatUSD(ADDITIONAL_PRICES.separateColors)}</span>
                       </div>
                     )}
                     {preferences.useSoftener && (
                       <div className="flex justify-between">
-                        <span>Suavizante:</span>
-                        <span>+{formatCOP(ADDITIONAL_PRICES.softener)}</span>
+                        <span>Fabric softener:</span>
+                        <span>+{formatUSD(ADDITIONAL_PRICES.softener)}</span>
                       </div>
                     )}
                     {preferences.useBleach && (
                       <div className="flex justify-between">
-                        <span>Oxígeno Activo:</span>
-                        <span>+{formatCOP(ADDITIONAL_PRICES.bleach)}</span>
+                        <span>Active Oxygen:</span>
+                        <span>+{formatUSD(ADDITIONAL_PRICES.bleach)}</span>
                       </div>
                     )}
                     {preferences.useDegreaser && (
                       <div className="flex justify-between">
-                        <span>Desengrasante:</span>
-                        <span>+{formatCOP(ADDITIONAL_PRICES.degreaser)}</span>
+                        <span>Degreaser:</span>
+                        <span>+{formatUSD(ADDITIONAL_PRICES.degreaser)}</span>
                       </div>
                     )}
                     {preferences.stainCount > 0 && (
                       <div className="flex justify-between">
-                        <span>Manchas ({preferences.stainCount}):</span>
-                        <span>+{formatCOP(preferences.stainCount * ADDITIONAL_PRICES.stainTreatment)}</span>
+                        <span>Stains ({preferences.stainCount}):</span>
+                        <span>+{formatUSD(preferences.stainCount * ADDITIONAL_PRICES.stainTreatment)}</span>
                       </div>
                     )}
                     <div className="border-t pt-2 flex justify-between font-semibold">
-                      <span>Total estimado:</span>
-                      <span className="text-primary">{formatCOP(estimatePrice())}</span>
+                      <span>Estimated total:</span>
+                      <span className="text-primary">{formatUSD(estimatePrice())}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">* El precio final se calculará al pesar tu ropa</p>
+                  <p className="text-xs text-muted-foreground">* The final price will be calculated when your laundry is weighed</p>
                 </div>
               </div>
 
               <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Atrás</Button>
+                <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Back</Button>
                 <Button className="flex-1" onClick={handleSubmit} disabled={loading}>
-                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Procesando...</> : 'Solicitar Servicio'}
+                  {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : 'Request Service'}
                 </Button>
               </div>
             </CardContent>
@@ -527,14 +527,14 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
         )}
       </div>
 
-      {/* Modal del mapa */}
+      {/* Map modal */}
       {showMapModal && isLoaded && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="bg-background w-full max-w-lg rounded-xl shadow-2xl overflow-hidden flex flex-col h-[70vh]">
             <div className="p-4 border-b flex justify-between items-center bg-card">
               <div>
-                <h3 className="font-semibold text-lg">Mueve el pin a tu puerta</h3>
-                <p className="text-xs text-muted-foreground">Esto ayuda al domiciliario a encontrarte rápido.</p>
+                <h3 className="font-semibold text-lg">Move the pin to your door</h3>
+                <p className="text-xs text-muted-foreground">This helps the delivery driver find you quickly.</p>
               </div>
               <Button variant="ghost" size="icon" onClick={() => setShowMapModal(false)}>
                 <X className="h-5 w-5" />
@@ -563,7 +563,7 @@ export function ServiceRequestForm({ userId, userAddress }: ServiceRequestFormPr
             <div className="p-4 bg-card border-t">
               <Button className="w-full text-md py-6" onClick={handleConfirmLocation}>
                 <MapPinned className="mr-2 h-5 w-5" />
-                Confirmar esta ubicación
+                Confirm this location
               </Button>
             </div>
           </div>

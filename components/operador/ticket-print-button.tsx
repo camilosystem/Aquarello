@@ -1,10 +1,10 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Printer, Loader2 } from 'lucide-react'
 import QRCode from 'qrcode'
-import { formatOrderNumber, formatCOP, type Order, type OrderPreferences } from '@/lib/types'
+import { formatOrderNumber, formatUSD, type Order, type OrderPreferences } from '@/lib/types'
 
 interface Props {
   order: Order & Record<string, any>
@@ -32,37 +32,37 @@ export function TicketPrintButton({ order, preferences, clientName }: Props) {
   }
 
   const openPrintWindow = (qrDataUrl: string | null) => {
-    const date = new Date(order.created_at).toLocaleDateString('es-CO', {
+    const date = new Date(order.created_at).toLocaleDateString('en-US', {
       day: '2-digit', month: 'long', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     })
-    const now = new Date().toLocaleString('es-CO', {
+    const now = new Date().toLocaleString('en-US', {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     })
 
     const STATUS_MAP: Record<string, string> = {
-      pendiente: 'Pendiente', recogido: 'Recogido', en_deposito: 'En depósito',
-      en_transito_lavado: 'En tránsito a lavado', en_lavado: 'En lavado',
-      en_secado: 'En secado', en_alistamiento: 'En alistamiento', listo: 'Listo',
-      en_transito_entrega: 'En tránsito a entrega', en_ruta_entrega: 'En ruta de entrega',
-      entregado: 'Entregado', cancelado: 'Cancelado',
+      pendiente: 'Pending', recogido: 'Picked up', en_deposito: 'In deposit',
+      en_transito_lavado: 'In transit to wash', en_lavado: 'Washing',
+      en_secado: 'Drying', en_alistamiento: 'Finishing', listo: 'Ready',
+      en_transito_entrega: 'Out for delivery', en_ruta_entrega: 'On delivery route',
+      entregado: 'Delivered', cancelado: 'Cancelled',
     }
 
     const prefRows = preferences ? [
-      ['Separar ropa blanca',    preferences.separate_whites],
-      ['Separar ropa de color',  preferences.separate_colors],
-      ['Suavizante',             preferences.use_softener],
-      ['Oxígeno Activo',         preferences.use_bleach],
-      ['Desengrasante',          preferences.use_degreaser],
-      ['Tratamiento de manchas', (preferences.stain_count ?? 0) > 0],
+      ['Separate whites',    preferences.separate_whites],
+      ['Separate colors',    preferences.separate_colors],
+      ['Fabric softener',    preferences.use_softener],
+      ['Active Oxygen',      preferences.use_bleach],
+      ['Degreaser',          preferences.use_degreaser],
+      ['Stain treatment',    (preferences.stain_count ?? 0) > 0],
     ] as [string, boolean][] : []
 
     const activePref = prefRows.filter(([, v]) => v)
     const inactivePref = prefRows.filter(([, v]) => !v)
 
     const prefHTML = prefRows.length === 0
-      ? '<p style="color:#64748b;font-size:13px;">Sin preferencias especiales</p>'
+      ? '<p style="color:#64748b;font-size:13px;">No special preferences</p>'
       : [
           ...activePref.map(([label]) => `
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
@@ -78,21 +78,21 @@ export function TicketPrintButton({ order, preferences, clientName }: Props) {
 
     const stainRow = (preferences?.stain_count ?? 0) > 0
       ? `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f1f5f9;">
-           <span style="font-size:13px;color:#64748b;">Manchas tratadas</span>
+           <span style="font-size:13px;color:#64748b;">Stains treated</span>
            <span style="font-size:13px;font-weight:600;">${preferences!.stain_count}</span>
          </div>`
       : ''
 
     const scentRow = preferences?.scent && preferences.scent !== 'ninguno'
       ? `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f1f5f9;">
-           <span style="font-size:13px;color:#64748b;">Fragancia</span>
+           <span style="font-size:13px;color:#64748b;">Fragrance</span>
            <span style="font-size:13px;font-weight:600;">${preferences.scent}</span>
          </div>`
       : ''
 
     const notesRow = preferences?.special_instructions
       ? `<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border-radius:6px;border-left:3px solid #6366f1;">
-           <p style="font-size:11px;color:#6366f1;font-weight:600;margin:0 0 3px 0;">NOTAS ESPECIALES</p>
+           <p style="font-size:11px;color:#6366f1;font-weight:600;margin:0 0 3px 0;">SPECIAL NOTES</p>
            <p style="font-size:13px;margin:0;">${preferences.special_instructions}</p>
          </div>`
       : ''
@@ -100,13 +100,13 @@ export function TicketPrintButton({ order, preferences, clientName }: Props) {
     const price = order.final_price ?? order.total_price ?? order.estimated_price ?? order.base_price
     const priceRow = price
       ? `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f1f5f9;">
-           <span style="font-size:13px;color:#64748b;">Precio</span>
-           <span style="font-size:13px;font-weight:600;">${formatCOP(price)}</span>
+           <span style="font-size:13px;color:#64748b;">Price</span>
+           <span style="font-size:13px;font-weight:600;">${formatUSD(price)}</span>
          </div>`
       : ''
 
     const html = `<!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <title>Ticket ${formatOrderNumber(order.order_number)}</title>
@@ -127,17 +127,17 @@ export function TicketPrintButton({ order, preferences, clientName }: Props) {
 <body>
 <div class="page">
 
-  <!-- Header Lavva -->
+  <!-- Header Aquarello -->
   <div style="text-align:center;margin-bottom:10px;">
-    <p style="font-size:22px;font-weight:800;letter-spacing:3px;color:#1e293b;">LAVVA</p>
-    <p style="font-size:11px;color:#64748b;letter-spacing:1px;">SERVICIO DE LAVANDERÍA</p>
+    <p style="font-size:22px;font-weight:800;letter-spacing:3px;color:#1e293b;">AQUARELLO</p>
+    <p style="font-size:11px;color:#64748b;letter-spacing:1px;">LAUNDRY SERVICE</p>
   </div>
 
   <hr class="divider"/>
 
-  <!-- Número de orden -->
+  <!-- Order number -->
   <div style="text-align:center;margin:8px 0;">
-    <p style="font-size:11px;color:#64748b;letter-spacing:1px;margin-bottom:2px;">NÚMERO DE ORDEN</p>
+    <p style="font-size:11px;color:#64748b;letter-spacing:1px;margin-bottom:2px;">ORDER NUMBER</p>
     <p style="font-size:32px;font-weight:800;letter-spacing:4px;color:#1e293b;">${formatOrderNumber(order.order_number)}</p>
     <p style="font-size:10px;font-family:monospace;color:#94a3b8;margin-top:2px;">${order.qr_code}</p>
   </div>
@@ -151,24 +151,24 @@ export function TicketPrintButton({ order, preferences, clientName }: Props) {
 
   <hr class="divider"/>
 
-  <!-- Estado y fecha -->
+  <!-- Status and date -->
   <div style="margin-bottom:8px;">
     <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f1f5f9;">
-      <span style="font-size:13px;color:#64748b;">Estado</span>
+      <span style="font-size:13px;color:#64748b;">Status</span>
       <span style="font-size:13px;font-weight:600;">${STATUS_MAP[order.status] ?? order.status}</span>
     </div>
     <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f1f5f9;">
-      <span style="font-size:13px;color:#64748b;">Fecha</span>
+      <span style="font-size:13px;color:#64748b;">Date</span>
       <span style="font-size:13px;">${date}</span>
     </div>
   </div>
 
   <hr class="divider"/>
 
-  <!-- Cliente -->
+  <!-- Client -->
   <div style="margin-bottom:8px;">
-    <p style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:1px;margin-bottom:5px;">CLIENTE</p>
-    <p style="font-size:14px;font-weight:700;">${clientName ?? (order.walk_in_name ?? 'Sin nombre')}</p>
+    <p style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:1px;margin-bottom:5px;">CLIENT</p>
+    <p style="font-size:14px;font-weight:700;">${clientName ?? (order.walk_in_name ?? 'No name')}</p>
     ${order.walk_in_phone || order.user_phone
       ? `<p style="font-size:12px;color:#64748b;margin-top:2px;">${order.walk_in_phone ?? order.user_phone}</p>`
       : ''}
@@ -179,13 +179,13 @@ export function TicketPrintButton({ order, preferences, clientName }: Props) {
 
   <hr class="divider"/>
 
-  <!-- Detalles -->
+  <!-- Details -->
   <div style="margin-bottom:8px;">
-    <p style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:1px;margin-bottom:5px;">DETALLES</p>
+    <p style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:1px;margin-bottom:5px;">DETAILS</p>
     ${order.weight_kg
       ? `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f1f5f9;">
-           <span style="font-size:13px;color:#64748b;">Peso</span>
-           <span style="font-size:13px;font-weight:600;">${order.weight_kg} kg</span>
+           <span style="font-size:13px;color:#64748b;">Weight</span>
+           <span style="font-size:13px;font-weight:600;">${order.weight_kg} lb</span>
          </div>`
       : ''}
     ${priceRow}
@@ -195,9 +195,9 @@ export function TicketPrintButton({ order, preferences, clientName }: Props) {
 
   <hr class="divider"/>
 
-  <!-- Preferencias -->
+  <!-- Preferences -->
   <div style="margin-bottom:8px;">
-    <p style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:1px;margin-bottom:6px;">PREFERENCIAS DE LAVADO</p>
+    <p style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:1px;margin-bottom:6px;">WASHING PREFERENCES</p>
     ${prefHTML}
     ${notesRow}
   </div>
@@ -206,8 +206,8 @@ export function TicketPrintButton({ order, preferences, clientName }: Props) {
 
   <!-- Footer -->
   <div style="text-align:center;margin-top:8px;">
-    <p style="font-size:10px;color:#94a3b8;">Impreso: ${now}</p>
-    <p style="font-size:10px;color:#94a3b8;margin-top:2px;">lavva.co</p>
+    <p style="font-size:10px;color:#94a3b8;">Printed: ${now}</p>
+    <p style="font-size:10px;color:#94a3b8;margin-top:2px;">aquarello.co</p>
   </div>
 
 </div>
@@ -236,7 +236,7 @@ export function TicketPrintButton({ order, preferences, clientName }: Props) {
       {loading
         ? <Loader2 className="h-4 w-4 animate-spin" />
         : <Printer className="h-4 w-4" />}
-      Imprimir
+      Print
     </Button>
   )
 }

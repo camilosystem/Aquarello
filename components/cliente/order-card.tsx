@@ -1,13 +1,13 @@
-'use client'
+﻿'use client'
 
 import Link from 'next/link'
 import { formatDistanceToNow } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import { ChevronRight, QrCode } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { OrderStatusTimeline } from './order-status-timeline'
-import { STATUS_LABELS, formatCOP, formatOrderNumber, type Order } from '@/lib/types'
+import { STATUS_LABELS, formatUSD, formatOrderNumber, type Order } from '@/lib/types'
 
 interface OrderCardProps {
   order: Order
@@ -51,17 +51,17 @@ export function OrderCard({ order }: OrderCardProps) {
               {/* Details */}
               <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                 {order.weight_kg && (
-                  <span>{order.weight_kg} kg</span>
+                  <span>{order.weight_kg} lb</span>
                 )}
                 <span>
                   {formatDistanceToNow(new Date(order.created_at), {
                     addSuffix: true,
-                    locale: es,
+                    locale: enUS,
                   })}
                 </span>
                 {(order.final_price || order.estimated_price) && (
                   <span className="font-medium text-foreground">
-                    {formatCOP(order.final_price || order.estimated_price || 0)}
+                    {formatUSD(order.final_price || order.estimated_price || 0)}
                   </span>
                 )}
               </div>

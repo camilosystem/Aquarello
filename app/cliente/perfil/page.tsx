@@ -26,9 +26,9 @@ export default async function PerfilPage() {
       
       <main className="flex-1 container px-4 py-6 pb-24">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Mi Perfil</h1>
+          <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
           <p className="text-muted-foreground">
-            Administra tu información personal
+            Manage your personal information
           </p>
         </div>
 

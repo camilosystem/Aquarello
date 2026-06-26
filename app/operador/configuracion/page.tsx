@@ -17,8 +17,8 @@ export default async function ConfiguracionPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || (profile.role !== 'operador' && profile.role !== 'admin')) {
-    redirect('/operador/login')
+  if (!profile || profile.role !== 'admin') {
+    redirect('/operador')
   }
 
   const settings = await loadSettingsAction()

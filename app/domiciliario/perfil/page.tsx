@@ -84,9 +84,9 @@ export default function PerfilDomiciliarioPage() {
       .eq("id", user.id)
 
     if (error) {
-      toast.error("Error al guardar el perfil")
+      toast.error("Error saving profile")
     } else {
-      toast.success("Perfil actualizado")
+      toast.success("Profile updated")
     }
 
     setSaving(false)
@@ -125,7 +125,7 @@ export default function PerfilDomiciliarioPage() {
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <h2 className="text-xl font-bold">{formData.full_name || "Domiciliario"}</h2>
+              <h2 className="text-xl font-bold">{formData.full_name || "Driver"}</h2>
               <p className="text-sm text-muted-foreground">{user?.email}</p>
               <div className="flex items-center gap-2 mt-2">
                 <Bike className="h-4 w-4 text-primary" />
@@ -138,14 +138,14 @@ export default function PerfilDomiciliarioPage() {
         {/* Profile Form */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Informacion Personal</CardTitle>
-            <CardDescription>Actualiza tus datos de perfil</CardDescription>
+            <CardTitle className="text-base">Personal Information</CardTitle>
+            <CardDescription>Update your profile details</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                Nombre Completo
+                Full Name
               </Label>
               <Input
                 id="name"
@@ -157,7 +157,7 @@ export default function PerfilDomiciliarioPage() {
             <div className="space-y-2">
               <Label htmlFor="email" className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                Correo Electronico
+                Email
               </Label>
               <Input
                 id="email"
@@ -170,11 +170,11 @@ export default function PerfilDomiciliarioPage() {
             <div className="space-y-2">
               <Label htmlFor="phone" className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
-                Telefono
+                Phone
               </Label>
               <Input
                 id="phone"
-                placeholder="300 123 4567"
+                placeholder="(555) 123-4567"
                 value={formData.phone}
                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               />
@@ -185,7 +185,7 @@ export default function PerfilDomiciliarioPage() {
             <div className="space-y-2">
               <Label htmlFor="vehicle" className="flex items-center gap-2">
                 <Bike className="h-4 w-4" />
-                Tipo de Vehiculo
+                Vehicle Type
               </Label>
               <Input
                 id="vehicle"
@@ -197,7 +197,7 @@ export default function PerfilDomiciliarioPage() {
             <div className="space-y-2">
               <Label htmlFor="plate" className="flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                Placa / Identificador
+                Plate / ID
               </Label>
               <Input
                 id="plate"
@@ -213,7 +213,7 @@ export default function PerfilDomiciliarioPage() {
               ) : (
                 <Save className="h-4 w-4 mr-2" />
               )}
-              Guardar Cambios
+              Save Changes
             </Button>
           </CardContent>
         </Card>
@@ -221,15 +221,15 @@ export default function PerfilDomiciliarioPage() {
         {/* Settings */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Configuracion</CardTitle>
+            <CardTitle className="text-base">Settings</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Bell className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="font-medium">Notificaciones</p>
-                  <p className="text-sm text-muted-foreground">Nuevas tareas asignadas</p>
+                  <p className="font-medium">Notifications</p>
+                  <p className="text-sm text-muted-foreground">New assigned tasks</p>
                 </div>
               </div>
               <Switch
@@ -246,7 +246,7 @@ export default function PerfilDomiciliarioPage() {
               onClick={handleLogout}
             >
               <LogOut className="h-4 w-4 mr-2" />
-              Cerrar Sesion
+              Sign Out
             </Button>
           </CardContent>
         </Card>

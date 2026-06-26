@@ -31,12 +31,12 @@ export default function ClienteRegistroPage() {
     e.preventDefault()
     
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Las contraseñas no coinciden')
+      toast.error('Passwords do not match')
       return
     }
 
     if (formData.password.length < 6) {
-      toast.error('La contraseña debe tener al menos 6 caracteres')
+      toast.error('Password must be at least 6 characters')
       return
     }
 
@@ -44,7 +44,7 @@ export default function ClienteRegistroPage() {
 
     try {
       if (!supabase) {
-        toast.error('Error de conexion. Por favor recarga la pagina.')
+        toast.error('Connection error. Please reload the page.')
         return
       }
 
@@ -68,18 +68,18 @@ export default function ClienteRegistroPage() {
 
       if (data.user && !data.session) {
         // Email confirmation required
-        toast.success('Revisa tu correo para confirmar tu cuenta')
+        toast.success('Check your email to confirm your account')
         router.push('/cliente/login')
       } else if (data.session) {
         // Auto-confirmed
-        toast.success('Cuenta creada exitosamente')
+        toast.success('Account created successfully')
         router.push('/cliente')
         router.refresh()
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       if (errorMessage.includes('already registered')) {
-        toast.error('Este correo ya está registrado')
+        toast.error('This email is already registered')
       } else {
         toast.error(errorMessage)
       }
@@ -95,31 +95,31 @@ export default function ClienteRegistroPage() {
         <div className="flex flex-col items-center gap-3">
           <div className="rounded-2xl overflow-hidden shadow-xl">
             <Image
-              src="/logo-lavva.png"
-              alt="Lavva"
+              src="/AquaLogo.jpg"
+              alt="Aquarello"
               width={180}
               height={180}
               className="w-44 h-auto"
             />
           </div>
-          <p className="text-sm text-muted-foreground">Crea tu cuenta de cliente</p>
+          <p className="text-sm text-muted-foreground">Create your client account</p>
         </div>
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Registrarse</CardTitle>
+            <CardTitle>Sign Up</CardTitle>
             <CardDescription>
-              Completa tus datos para crear tu cuenta
+              Fill in your details to create your account
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Nombre completo</Label>
+                <Label htmlFor="fullName">Full name</Label>
                 <Input
                   id="fullName"
                   type="text"
-                  placeholder="Juan Pérez"
+                  placeholder="John Smith"
                   value={formData.fullName}
                   onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                   required
@@ -128,11 +128,11 @@ export default function ClienteRegistroPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Correo electrónico</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="tu@email.com"
+                  placeholder="you@email.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
@@ -141,11 +141,11 @@ export default function ClienteRegistroPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Teléfono</Label>
+                <Label htmlFor="phone">Phone</Label>
                 <Input
                   id="phone"
                   type="tel"
-                  placeholder="300 123 4567"
+                  placeholder="(555) 123-4567"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   required
@@ -154,11 +154,11 @@ export default function ClienteRegistroPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="city">Ciudad</Label>
+                <Label htmlFor="city">City</Label>
                 <Input
                   id="city"
                   type="text"
-                  placeholder="Bogotá"
+                  placeholder="Jackson Heights"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                   autoComplete="address-level2"
@@ -166,11 +166,11 @@ export default function ClienteRegistroPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address">Dirección</Label>
+                <Label htmlFor="address">Address</Label>
                 <Input
                   id="address"
                   type="text"
-                  placeholder="Calle 100 #15-20"
+                  placeholder="8201 Northern Blvd"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                   required
@@ -179,12 +179,12 @@ export default function ClienteRegistroPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Mínimo 6 caracteres"
+                    placeholder="At least 6 characters"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
@@ -207,11 +207,11 @@ export default function ClienteRegistroPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
+                <Label htmlFor="confirmPassword">Confirm password</Label>
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="Repite tu contraseña"
+                  placeholder="Re-enter your password"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   required
@@ -223,25 +223,25 @@ export default function ClienteRegistroPage() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creando cuenta...
+                    Creating account...
                   </>
                 ) : (
-                  'Crear Cuenta'
+                  'Create Account'
                 )}
               </Button>
             </form>
 
             <div className="mt-6 text-center text-sm">
-              <span className="text-muted-foreground">¿Ya tienes cuenta? </span>
+              <span className="text-muted-foreground">Already have an account? </span>
               <Link href="/cliente/login" className="font-medium text-primary hover:underline">
-                Inicia sesión
+                Sign in
               </Link>
             </div>
           </CardContent>
         </Card>
 
         <p className="text-center text-xs text-muted-foreground">
-          Al registrarte, aceptas nuestros términos de servicio y política de privacidad
+          By signing up, you agree to our terms of service and privacy policy
         </p>
       </div>
     </div>

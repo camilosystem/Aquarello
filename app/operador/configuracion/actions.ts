@@ -25,7 +25,7 @@ export async function saveSettingsAction(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const supabase = await createClient()
-    if (!supabase) return { ok: false, error: 'Error de configuración del servidor' }
+    if (!supabase) return { ok: false, error: 'Server configuration error' }
     const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase.from('app_settings').upsert({
       id: SETTINGS_ID,

@@ -36,33 +36,33 @@ export function DomiciliarioHeader({ userName, pendingCount = 0 }: HeaderProps) 
       <div className="container flex h-16 items-center justify-between px-4">
         <Link href="/domiciliario" className="flex items-center gap-2">
           <Image
-            src="/logo-lavva.png"
-            alt="Lavva"
+            src="/AquaLogo.jpg"
+            alt="Aquarello"
             width={80}
-            height={32}
-            className="h-20 w-auto"
+            height={80}
+            className="h-12 w-auto rounded-lg"
           />
         </Link>
 
         <div className="flex items-center gap-3">
           {pendingCount > 0 && (
             <Badge variant="secondary" className="bg-primary/10 text-primary">
-              {pendingCount} pendientes
+              {pendingCount} pending
             </Badge>
           )}
-          
+
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="shrink-0">
                 {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-                <span className="sr-only">Menú</span>
+                <span className="sr-only">Menu</span>
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="w-[280px] sm:w-[320px]">
-              <SheetTitle className="sr-only">Menú de navegación</SheetTitle>
+              <SheetTitle className="sr-only">Navigation menu</SheetTitle>
               <div className="mt-4 mb-6">
-                <p className="text-sm text-muted-foreground">Bienvenido,</p>
-                <p className="font-semibold">{userName || 'Domiciliario'}</p>
+                <p className="text-sm text-muted-foreground">Welcome,</p>
+                <p className="font-semibold">{userName || 'Driver'}</p>
               </div>
               <nav className="flex flex-col gap-2">
                 <Link
@@ -71,7 +71,7 @@ export function DomiciliarioHeader({ userName, pendingCount = 0 }: HeaderProps) 
                   className="flex items-center gap-3 rounded-lg px-3 py-3 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   <Map className="h-5 w-5" />
-                  <span>Mapa de Rutas</span>
+                  <span>Route Map</span>
                 </Link>
                 <Link
                   href="/domiciliario/tareas"
@@ -79,7 +79,7 @@ export function DomiciliarioHeader({ userName, pendingCount = 0 }: HeaderProps) 
                   className="flex items-center gap-3 rounded-lg px-3 py-3 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   <Package className="h-5 w-5" />
-                  <span>Mis Tareas</span>
+                  <span>My Tasks</span>
                 </Link>
                 <Link
                   href="/domiciliario/perfil"
@@ -87,13 +87,13 @@ export function DomiciliarioHeader({ userName, pendingCount = 0 }: HeaderProps) 
                   className="flex items-center gap-3 rounded-lg px-3 py-3 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   <User className="h-5 w-5" />
-                  <span>Mi Perfil</span>
+                  <span>My Profile</span>
                 </Link>
                 <div className="my-4 border-t" />
                 <PWAInstallButton
                   variant="outline"
                   size="sm"
-                  label="Instalar App Lavva"
+                  label="Install Aquarello App"
                   className="w-full justify-start px-3"
                 />
                 <button
@@ -101,8 +101,13 @@ export function DomiciliarioHeader({ userName, pendingCount = 0 }: HeaderProps) 
                   className="flex items-center gap-3 rounded-lg px-3 py-3 text-destructive transition-colors hover:bg-destructive/10"
                 >
                   <LogOut className="h-5 w-5" />
-                  <span>Cerrar Sesión</span>
+                  <span>Sign Out</span>
                 </button>
+                <div className="my-4 border-t" />
+                <div className="px-3 text-center text-xs text-muted-foreground space-y-0.5">
+                  <p>8201 Northern Blvd, Jackson Heights, NY 11372</p>
+                  <p>(718) 433-9631 &middot; aquarelonyc@gmail.com</p>
+                </div>
               </nav>
             </SheetContent>
           </Sheet>

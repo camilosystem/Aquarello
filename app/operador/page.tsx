@@ -17,13 +17,13 @@ import { STATUS_LABELS, STATUS_COLORS, formatOrderNumber, type Order, type Profi
 
 interface DashboardStats {
   pendientes: number    // pendiente + recogido + en_deposito
-  enPlanta: number      // en_transito_lavado (llegaron a la planta, aún no lavando)
+  enPlanta: number      // en_transito_lavado (arrived at the facility, not washing yet)
   lavando: number       // en_lavado
   secando: number       // en_secado
   alistando: number     // en_alistamiento
   listos: number        // listo
   enRuta: number        // en_ruta_entrega
-  entregados: number    // entregado (hoy)
+  entregados: number    // entregado (today)
   todayOrders: number
   weeklyOrders: number
 }
@@ -57,7 +57,7 @@ export default function OperadorDashboard() {
       }
       setProfile(profileData)
 
-      // ── Conteos por estado (sin traer filas, solo cuenta) ────────────────
+      // ── Counts by status (no rows fetched, count only) ────────────────
       const countByStatus = async (statuses: string[]) => {
         const { count } = await supabase
           .from('orders')
@@ -100,7 +100,7 @@ export default function OperadorDashboard() {
         weeklyOrders: weekCount ?? 0,
       })
 
-      // ── Órdenes recientes ─────────────────────────────────────────────────
+      // ── Recent orders ─────────────────────────────────────────────────
       const { data: recent } = await supabase
         .from('orders')
         .select('*')
@@ -123,14 +123,14 @@ export default function OperadorDashboard() {
   }
 
   const STAT_CARDS = [
-    { label: 'Pendientes',   value: stats.pendientes, icon: Clock,        bg: 'bg-yellow-100', color: 'text-yellow-600' },
-    { label: 'En Planta',    value: stats.enPlanta,   icon: Package,      bg: 'bg-indigo-100', color: 'text-indigo-600' },
-    { label: 'Lavando',      value: stats.lavando,    icon: Droplets,     bg: 'bg-cyan-100',   color: 'text-cyan-600'   },
-    { label: 'Secando',      value: stats.secando,    icon: Wind,         bg: 'bg-orange-100', color: 'text-orange-600' },
-    { label: 'Alistando',    value: stats.alistando,  icon: Sparkles,     bg: 'bg-pink-100',   color: 'text-pink-600'   },
-    { label: 'Listos',       value: stats.listos,     icon: CheckCircle2, bg: 'bg-green-100',  color: 'text-green-600'  },
-    { label: 'En Ruta',      value: stats.enRuta,     icon: Bike,         bg: 'bg-emerald-100',color: 'text-emerald-600'},
-    { label: 'Entregados Hoy', value: stats.entregados, icon: Shirt,      bg: 'bg-primary/10', color: 'text-primary'    },
+    { label: 'Pending',        value: stats.pendientes, icon: Clock,        bg: 'bg-yellow-100', color: 'text-yellow-600' },
+    { label: 'At Facility',    value: stats.enPlanta,   icon: Package,      bg: 'bg-indigo-100', color: 'text-indigo-600' },
+    { label: 'Washing',        value: stats.lavando,    icon: Droplets,     bg: 'bg-cyan-100',   color: 'text-cyan-600'   },
+    { label: 'Drying',         value: stats.secando,    icon: Wind,         bg: 'bg-orange-100', color: 'text-orange-600' },
+    { label: 'Finishing',      value: stats.alistando,  icon: Sparkles,     bg: 'bg-pink-100',   color: 'text-pink-600'   },
+    { label: 'Ready',          value: stats.listos,     icon: CheckCircle2, bg: 'bg-green-100',  color: 'text-green-600'  },
+    { label: 'Out for Delivery', value: stats.enRuta,   icon: Bike,         bg: 'bg-emerald-100',color: 'text-emerald-600'},
+    { label: 'Delivered Today', value: stats.entregados, icon: Shirt,      bg: 'bg-primary/10', color: 'text-primary'    },
   ]
 
   return (
@@ -143,21 +143,21 @@ export default function OperadorDashboard() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Panel de Operadores</h1>
-              <p className="text-muted-foreground">Bienvenido, {profile?.full_name || 'Operador'}</p>
+              <h1 className="text-2xl font-bold text-foreground">Operator Panel</h1>
+              <p className="text-muted-foreground">Welcome, {profile?.full_name || 'Operator'}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <PWAInstallButton variant="outline" size="sm" />
               <Button variant="outline" onClick={() => router.push('/operador/tickets')}>
-                <ClipboardList className="mr-2 h-4 w-4" /> Ver Tickets
+                <ClipboardList className="mr-2 h-4 w-4" /> View Tickets
               </Button>
               <Button onClick={() => router.push('/operador/nueva-orden')}>
-                <Plus className="mr-2 h-4 w-4" /> Nueva Orden
+                <Plus className="mr-2 h-4 w-4" /> New Order
               </Button>
             </div>
           </div>
 
-          {/* Stats de estado — 4 columnas en desktop */}
+          {/* Status stats — 4 columns on desktop */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {STAT_CARDS.map(s => (
               <Card key={s.label}>
@@ -176,7 +176,7 @@ export default function OperadorDashboard() {
             ))}
           </div>
 
-          {/* Volumen */}
+          {/* Volume */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
@@ -184,7 +184,7 @@ export default function OperadorDashboard() {
                   <TrendingUp className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Pedidos Hoy</p>
+                  <p className="text-sm text-muted-foreground">Orders Today</p>
                   <p className="text-2xl font-bold">{stats.todayOrders}</p>
                 </div>
               </CardContent>
@@ -195,7 +195,7 @@ export default function OperadorDashboard() {
                   <TrendingUp className="h-5 w-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Esta Semana</p>
+                  <p className="text-sm text-muted-foreground">This Week</p>
                   <p className="text-2xl font-bold">{stats.weeklyOrders}</p>
                 </div>
               </CardContent>
@@ -206,26 +206,26 @@ export default function OperadorDashboard() {
                   <Users className="h-5 w-5 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Operador</p>
+                  <p className="text-sm text-muted-foreground">Operator</p>
                   <p className="font-semibold truncate">{profile?.full_name || 'N/A'}</p>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Órdenes recientes */}
+          {/* Recent orders */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base">Órdenes Recientes</CardTitle>
+              <CardTitle className="text-base">Recent Orders</CardTitle>
               <Button variant="ghost" size="sm" onClick={() => router.push('/operador/tickets')}>
-                Ver todas
+                View all
               </Button>
             </CardHeader>
             <CardContent>
               {recentOrders.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <AlertCircle className="h-10 w-10 mx-auto mb-2 opacity-40" />
-                  <p>No hay órdenes aún</p>
+                  <p>No orders yet</p>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -243,8 +243,8 @@ export default function OperadorDashboard() {
                           <p className="text-sm font-semibold truncate">{formatOrderNumber((order as any).order_number)}</p>
                           <p className="font-mono text-xs text-muted-foreground truncate">{order.qr_code}</p>
                           <p className="text-xs text-muted-foreground">
-                            {order.walk_in_name ?? 'Cliente'} ·{' '}
-                            {new Date(order.created_at).toLocaleDateString('es-CO')}
+                            {order.walk_in_name ?? 'Customer'} ·{' '}
+                            {new Date(order.created_at).toLocaleDateString('en-US')}
                           </p>
                         </div>
                       </div>
@@ -258,13 +258,13 @@ export default function OperadorDashboard() {
             </CardContent>
           </Card>
 
-          {/* Acciones rápidas */}
+          {/* Quick actions */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Gestionar Tickets', icon: ClipboardList, href: '/operador/tickets' },
-              { label: 'Inventario',         icon: Package,      href: '/operador/inventario' },
-              { label: 'Lavadoras',          icon: Shirt,        href: '/operador/lavadoras' },
-              { label: 'Equipo',             icon: Users,        href: '/operador/equipo' },
+              { label: 'Manage Tickets', icon: ClipboardList, href: '/operador/tickets' },
+              { label: 'Inventory',      icon: Package,       href: '/operador/inventario' },
+              { label: 'Machines',       icon: Shirt,         href: '/operador/lavadoras' },
+              { label: 'Team',           icon: Users,         href: '/operador/equipo' },
             ].map(a => (
               <Button
                 key={a.label}

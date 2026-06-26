@@ -1,7 +1,11 @@
-# LavvaAPP — Instrucciones para Claude Code
+# Aquarello — Instrucciones para Claude Code
 
 ## Qué es esto
-Aplicación web (PWA) para servicio de lavandería a domicilio en Colombia. Conecta tres tipos de usuario: **clientes**, **domiciliarios** y **operadores** de planta.
+**Aquarello** es el nombre oficial de la marca de este proyecto (clon renombrado de la app original "Lavva"). Es una aplicación web (PWA) para servicio de lavandería a domicilio en Colombia, construida en Next.js 16 + Supabase + Tailwind + TypeScript. Conecta tres portales/tipos de usuario: **cliente**, **operador** y **admin** (además de domiciliario/conductor a nivel de roles).
+
+Este proyecto conecta a su **propia base de datos Supabase independiente** (proyecto Aquarello), separada del proyecto original Lavva.
+
+Algunas referencias internas (nombres de variables, valores de enum como `fragrance: 'lavva'`, archivos de configuración de Supabase) aún contienen "lavva" por compatibilidad con datos/esquema existentes — esto es intencional y no debe cambiarse sin evaluar el impacto en datos ya almacenados. El texto visible al usuario (títulos, manifest, UI) ya usa "Aquarello".
 
 ---
 

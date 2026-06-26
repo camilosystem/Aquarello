@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Loader2, Package, Search, Calendar, MapPin, Scale } from "lucide-react"
 import { format } from "date-fns"
-import { es } from "date-fns/locale"
+import { enUS } from "date-fns/locale"
 import { STATUS_COLORS, formatOrderNumber } from "@/lib/types"
 
 export default function HistorialPage() {
@@ -70,19 +70,19 @@ export default function HistorialPage() {
           <Card>
             <CardContent className="p-3 text-center">
               <p className="text-2xl font-bold text-primary">{totalPickups}</p>
-              <p className="text-xs text-muted-foreground">Recogidas</p>
+              <p className="text-xs text-muted-foreground">Pickups</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
               <p className="text-2xl font-bold text-accent">{totalDeliveries}</p>
-              <p className="text-xs text-muted-foreground">Entregas</p>
+              <p className="text-xs text-muted-foreground">Deliveries</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-3 text-center">
               <p className="text-2xl font-bold">{totalWeight.toFixed(1)}</p>
-              <p className="text-xs text-muted-foreground">Kg Total</p>
+              <p className="text-xs text-muted-foreground">Total Lb</p>
             </CardContent>
           </Card>
         </div>
@@ -92,7 +92,7 @@ export default function HistorialPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por codigo, cliente o direccion..."
+              placeholder="Search by code, client, or address..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10"
@@ -105,9 +105,9 @@ export default function HistorialPage() {
           {filteredOrders.length === 0 ? (
             <div className="text-center py-12">
               <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="font-medium text-lg">No hay ordenes</h3>
+              <h3 className="font-medium text-lg">No orders</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Tu historial de ordenes aparecera aqui
+                Your order history will appear here
               </p>
             </div>
           ) : (
@@ -120,7 +120,7 @@ export default function HistorialPage() {
                       <div>
                         <p className="text-sm font-semibold">{formatOrderNumber((order as any).order_number)}</p>
                         <p className="font-mono text-xs text-muted-foreground">{order.qr_code}</p>
-                        <p className="text-sm text-muted-foreground">{order.walk_in_name || 'Sin nombre'}</p>
+                        <p className="text-sm text-muted-foreground">{order.walk_in_name || 'No name'}</p>
                       </div>
                       <Badge
                         style={{
@@ -141,13 +141,13 @@ export default function HistorialPage() {
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Calendar className="h-4 w-4" />
                           <span>
-                            {format(new Date(order.created_at), "dd MMM yyyy, HH:mm", { locale: es })}
+                            {format(new Date(order.created_at), "dd MMM yyyy, HH:mm", { locale: enUS })}
                           </span>
                         </div>
                         {order.weight && (
                           <div className="flex items-center gap-1 font-medium">
                             <Scale className="h-4 w-4" />
-                            {order.weight} kg
+                            {order.weight} lb
                           </div>
                         )}
                       </div>

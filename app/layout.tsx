@@ -7,12 +7,12 @@ import './globals.css'
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'Lavva - Lavanderia a Domicilio',
-  description: 'Servicio de lavanderia profesional a domicilio en Colombia. Recogemos, lavamos, planchamos y entregamos tu ropa.',
-  generator: 'Lavva',
+  title: 'Aquarello - Laundry Pickup & Delivery',
+  description: 'Professional laundry pickup and delivery service in New York. We pick up, wash, fold, and deliver your laundry.',
+  generator: 'Aquarello',
   manifest: '/manifest.json',
-  keywords: ['lavanderia', 'domicilio', 'Colombia', 'lavado', 'planchado', 'ropa'],
-  authors: [{ name: 'Lavva' }],
+  keywords: ['laundry', 'delivery', 'New York', 'wash and fold', 'dry cleaning', 'pickup'],
+  authors: [{ name: 'Aquarello' }],
   icons: {
     icon: '/icon-192.png',
     apple: '/icon-192.png',
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Lavva',
+    title: 'Aquarello',
   },
   formatDetection: {
     telephone: true,
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0891b2',
+  themeColor: '#63c91e',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -41,7 +41,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es">
+    <html lang="en">
       <body className={`${inter.className} antialiased`}>
         {children}
         <Toaster position="top-center" richColors />

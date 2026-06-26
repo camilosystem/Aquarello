@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { enUS } from 'date-fns/locale'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +30,7 @@ const EMPTY_FORM = {
   full_name: '',
   email: '',
   phone: '',
-  city: 'Bogotá',
+  city: 'Jackson Heights',
   address: '',
   operator_notes: '',
 }
@@ -53,13 +53,13 @@ export function ClientesListClient({ clientes }: ClientesListClientProps) {
 
   const handleCreate = () => {
     if (!form.full_name.trim() || !form.email.trim()) {
-      toast.error('Nombre y email son obligatorios')
+      toast.error('Name and email are required')
       return
     }
     startTransition(async () => {
       const result = await createClienteAction(form)
       if (result.ok) {
-        toast.success('Cliente creado. Recibirá un email para activar su cuenta.')
+        toast.success('Customer created. They will receive an email to activate their account.')
         setDialogOpen(false)
         setForm(EMPTY_FORM)
         router.refresh()
@@ -74,12 +74,12 @@ export function ClientesListClient({ clientes }: ClientesListClientProps) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Clientes</h1>
-          <p className="text-muted-foreground">{clientes.length} clientes registrados</p>
+          <h1 className="text-2xl font-bold text-foreground">Customers</h1>
+          <p className="text-muted-foreground">{clientes.length} registered customers</p>
         </div>
         <Button onClick={() => setDialogOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Nuevo Cliente
+          New Customer
         </Button>
       </div>
 
@@ -87,7 +87,7 @@ export function ClientesListClient({ clientes }: ClientesListClientProps) {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar por nombre, email o teléfono..."
+          placeholder="Search by name, email, or phone..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-10"
@@ -99,7 +99,7 @@ export function ClientesListClient({ clientes }: ClientesListClientProps) {
         <Card>
           <CardContent className="py-16 text-center text-muted-foreground">
             <User className="h-12 w-12 mx-auto mb-3 opacity-40" />
-            <p>{search ? 'No se encontraron clientes' : 'No hay clientes registrados aún'}</p>
+            <p>{search ? 'No customers found' : 'No customers registered yet'}</p>
           </CardContent>
         </Card>
       ) : (
@@ -117,7 +117,7 @@ export function ClientesListClient({ clientes }: ClientesListClientProps) {
                       <User className="h-5 w-5 text-primary" />
                     </div>
                     <div className="space-y-0.5 min-w-0">
-                      <p className="font-semibold truncate">{cliente.full_name ?? 'Sin nombre'}</p>
+                      <p className="font-semibold truncate">{cliente.full_name ?? 'No name'}</p>
                       <p className="text-sm text-muted-foreground truncate">{cliente.email}</p>
                       <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-1">
                         {cliente.phone && (
@@ -131,14 +131,14 @@ export function ClientesListClient({ clientes }: ClientesListClientProps) {
                           </span>
                         )}
                         <span>
-                          Desde {format(new Date(cliente.created_at), "MMM yyyy", { locale: es })}
+                          Since {format(new Date(cliente.created_at), "MMM yyyy", { locale: enUS })}
                         </span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     {(cliente as any).operator_notes && (
-                      <Badge variant="outline" className="text-xs hidden sm:flex">Con notas</Badge>
+                      <Badge variant="outline" className="text-xs hidden sm:flex">Has notes</Badge>
                     )}
                     <ChevronRight className="h-5 w-5 text-muted-foreground" />
                   </div>
@@ -149,19 +149,19 @@ export function ClientesListClient({ clientes }: ClientesListClientProps) {
         </div>
       )}
 
-      {/* Dialog crear cliente */}
+      {/* Create customer dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Nuevo Cliente</DialogTitle>
+            <DialogTitle>New Customer</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="c-name">Nombre completo *</Label>
+              <Label htmlFor="c-name">Full name *</Label>
               <Input
                 id="c-name"
-                placeholder="María García"
+                placeholder="Maria Garcia"
                 value={form.full_name}
                 onChange={(e) => setForm(p => ({ ...p, full_name: e.target.value }))}
               />
@@ -171,45 +171,45 @@ export function ClientesListClient({ clientes }: ClientesListClientProps) {
               <Input
                 id="c-email"
                 type="email"
-                placeholder="maria@ejemplo.com"
+                placeholder="maria@example.com"
                 value={form.email}
                 onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="c-phone">Teléfono</Label>
+                <Label htmlFor="c-phone">Phone</Label>
                 <Input
                   id="c-phone"
-                  placeholder="3001234567"
+                  placeholder="(555) 123-4567"
                   value={form.phone}
                   onChange={(e) => setForm(p => ({ ...p, phone: e.target.value }))}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="c-city">Ciudad</Label>
+                <Label htmlFor="c-city">City</Label>
                 <Input
                   id="c-city"
-                  placeholder="Bogotá"
+                  placeholder="Jackson Heights"
                   value={form.city}
                   onChange={(e) => setForm(p => ({ ...p, city: e.target.value }))}
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="c-address">Dirección</Label>
+              <Label htmlFor="c-address">Address</Label>
               <Input
                 id="c-address"
-                placeholder="Calle 100 #15-20"
+                placeholder="8201 Northern Blvd, Apt 5"
                 value={form.address}
                 onChange={(e) => setForm(p => ({ ...p, address: e.target.value }))}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="c-notes">Comentarios y preferencias</Label>
+              <Label htmlFor="c-notes">Comments and preferences</Label>
               <Textarea
                 id="c-notes"
-                placeholder="Notas internas del operador..."
+                placeholder="Internal operator notes..."
                 rows={3}
                 value={form.operator_notes}
                 onChange={(e) => setForm(p => ({ ...p, operator_notes: e.target.value }))}
@@ -219,12 +219,12 @@ export function ClientesListClient({ clientes }: ClientesListClientProps) {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isPending}>
-              Cancelar
+              Cancel
             </Button>
             <Button onClick={handleCreate} disabled={isPending}>
               {isPending
-                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creando...</>
-                : 'Crear Cliente'}
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</>
+                : 'Create Customer'}
             </Button>
           </DialogFooter>
         </DialogContent>

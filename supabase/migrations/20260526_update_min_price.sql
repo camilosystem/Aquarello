@@ -1,3 +1,1 @@
-UPDATE public.app_settings
-SET min_price = 28000
-WHERE id = '00000000-0000-0000-0000-000000000001';
+-- no-op: min_price already set via app settings (USD pricing, value managed through UI)

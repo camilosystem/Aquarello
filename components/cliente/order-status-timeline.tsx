@@ -14,32 +14,32 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-// Usamos string en lugar de un tipo estricto para evitar errores si types.ts no está actualizado
+// We use string instead of a strict type to avoid errors if types.ts is not updated
 interface TimelineStep {
   status: string
   label: string
   icon: React.ElementType
 }
 
-// NUEVO ORDEN LÓGICO DE NUESTRA CADENA DE CUSTODIA
+// LOGICAL ORDER OF OUR CHAIN OF CUSTODY
 const TIMELINE_STEPS: TimelineStep[] = [
-  { status: 'pendiente', label: 'Pendiente', icon: Clock },
-  { status: 'recogido', label: 'Recogido', icon: Bike },
-  { status: 'en_transito', label: 'En tránsito', icon: Truck },
-  { status: 'en_deposito', label: 'En lavandería', icon: Building2 }, // Handshake exitoso
-  { status: 'en_lavado', label: 'En lavado', icon: WashingMachine },
-  { status: 'en_secado', label: 'En secado', icon: Wind },
-  { status: 'en_alistamiento', label: 'Alistamiento', icon: Shirt },
-  { status: 'en_ruta_entrega', label: 'En ruta', icon: MapPin },
-  { status: 'entregado', label: 'Entregado', icon: CheckCircle2 },
+  { status: 'pendiente', label: 'Pending', icon: Clock },
+  { status: 'recogido', label: 'Picked Up', icon: Bike },
+  { status: 'en_transito', label: 'In Transit', icon: Truck },
+  { status: 'en_deposito', label: 'At Facility', icon: Building2 }, // Successful handshake
+  { status: 'en_lavado', label: 'Washing', icon: WashingMachine },
+  { status: 'en_secado', label: 'Drying', icon: Wind },
+  { status: 'en_alistamiento', label: 'Finishing', icon: Shirt },
+  { status: 'en_ruta_entrega', label: 'Out for Delivery', icon: MapPin },
+  { status: 'entregado', label: 'Delivered', icon: CheckCircle2 },
 ]
 
-// DICCIONARIO PARA SABER EN QUÉ NÚMERO DE PASO VAMOS (Incluye fallbacks por seguridad)
+// LOOKUP TABLE FOR WHICH STEP NUMBER WE'RE ON (includes fallbacks for safety)
 const STATUS_ORDER: Record<string, number> = {
   pendiente: 0,
   recogido: 1,
   en_transito: 2,
-  en_transito_lavado: 2, // Por si queda algún pedido viejo
+  en_transito_lavado: 2, // In case any old order remains
   en_deposito: 3,
   en_lavado: 4,
   en_secado: 5,
@@ -57,7 +57,7 @@ interface OrderStatusTimelineProps {
 }
 
 export function OrderStatusTimeline({ currentStatus, compact = false }: OrderStatusTimelineProps) {
-  // Obtenemos el índice actual. Si por alguna razón llega un estado raro, no rompemos la app (fallback a 0)
+  // Get the current index. If an unexpected status arrives, don't break the app (fallback to 0)
   const currentIndex = STATUS_ORDER[currentStatus] ?? 0
   const isCancelled = currentStatus === 'cancelado'
 
@@ -65,7 +65,7 @@ export function OrderStatusTimeline({ currentStatus, compact = false }: OrderSta
     return (
       <div className="flex items-center justify-center gap-2 rounded-lg bg-destructive/10 p-4 text-destructive">
         <XCircle className="h-5 w-5" />
-        <span className="font-medium">Pedido cancelado</span>
+        <span className="font-medium">Order cancelled</span>
       </div>
     )
   }
@@ -167,15 +167,15 @@ export function OrderStatusTimeline({ currentStatus, compact = false }: OrderSta
 
 function getStatusDescription(status: string): string {
   const descriptions: Record<string, string> = {
-    pendiente: 'Esperando que un domiciliario recoja tu ropa',
-    recogido: 'El domiciliario tiene tu bolsa de ropa',
-    en_transito: 'El domiciliario va en camino hacia la lavandería',
-    en_deposito: 'Tu ropa está segura en nuestras instalaciones',
-    en_lavado: 'Tu ropa está siendo lavada con cuidado',
-    en_secado: 'Tu ropa está en la secadora',
-    en_alistamiento: 'Doblando y preparando tu ropa',
-    en_ruta_entrega: 'El domiciliario va en camino a entregarte tu ropa',
-    entregado: '¡Tu ropa ha sido entregada!',
+    pendiente: 'Waiting for a driver to pick up your laundry',
+    recogido: 'The driver has your laundry bag',
+    en_transito: 'The driver is on the way to the facility',
+    en_deposito: 'Your laundry is safe at our facility',
+    en_lavado: 'Your laundry is being washed with care',
+    en_secado: 'Your laundry is in the dryer',
+    en_alistamiento: 'Folding and preparing your laundry',
+    en_ruta_entrega: 'The driver is on the way to deliver your laundry',
+    entregado: 'Your laundry has been delivered!',
   }
-  return descriptions[status] || 'Procesando tu pedido...'
+  return descriptions[status] || 'Processing your order...'
 }

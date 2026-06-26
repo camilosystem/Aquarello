@@ -43,17 +43,17 @@ export default function DomiciliarioLoginPage() {
 
       if (profile && !['domiciliario', 'admin'].includes(profile.role)) {
         await supabase.auth.signOut()
-        toast.error('Esta cuenta no tiene acceso de domiciliario.')
+        toast.error('This account does not have driver access.')
         return
       }
 
-      toast.success('Bienvenido, domiciliario')
+      toast.success('Welcome, driver')
       router.push('/domiciliario')
       router.refresh()
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      toast.error(errorMessage === 'Invalid login credentials' 
-        ? 'Email o contraseña incorrectos' 
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(errorMessage === 'Invalid login credentials'
+        ? 'Incorrect email or password'
         : errorMessage)
     } finally {
       setLoading(false)
@@ -67,31 +67,31 @@ export default function DomiciliarioLoginPage() {
         <div className="flex flex-col items-center gap-3">
           <div className="rounded-2xl overflow-hidden shadow-xl">
             <Image
-              src="/logo-lavva.png"
-              alt="Lavva"
+              src="/AquaLogo.jpg"
+              alt="Aquarello"
               width={180}
               height={180}
               className="w-44 h-auto"
             />
           </div>
-          <p className="text-sm text-muted-foreground">Panel de Domiciliario</p>
+          <p className="text-sm text-muted-foreground">Driver Panel</p>
         </div>
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Iniciar Sesión</CardTitle>
+            <CardTitle>Sign In</CardTitle>
             <CardDescription>
-              Ingresa con tu cuenta de domiciliario
+              Sign in with your driver account
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Correo electrónico</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="tu@email.com"
+                  placeholder="you@email.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
@@ -100,12 +100,12 @@ export default function DomiciliarioLoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Tu contraseña"
+                    placeholder="Your password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
@@ -131,17 +131,17 @@ export default function DomiciliarioLoginPage() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Ingresando...
+                    Signing in...
                   </>
                 ) : (
-                  'Iniciar Sesión'
+                  'Sign In'
                 )}
               </Button>
             </form>
 
             <div className="mt-6 text-center text-sm">
               <Link href="/" className="text-muted-foreground hover:text-primary">
-                Volver al inicio
+                Back to home
               </Link>
             </div>
           </CardContent>

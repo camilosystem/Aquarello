@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
-import { FRAGRANCE_OPTIONS, generateQRCode, formatCOP } from '@/lib/types'
+import { FRAGRANCE_OPTIONS, generateQRCode, formatUSD } from '@/lib/types'
 import { createOrdenOperadorAction } from '@/app/operador/nueva-orden/actions'
 import { type AppSettings, DEFAULT_SETTINGS } from '@/app/operador/configuracion/settings'
 
@@ -89,11 +89,11 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
 
   const handleContinueToStep2 = () => {
     if (!clientName.trim()) {
-      toast.error('Por favor ingresa el nombre del cliente')
+      toast.error('Please enter the client\'s name')
       return
     }
     if (!clientPhone.trim() || clientPhone.length < 7) {
-      toast.error('Por favor ingresa un teléfono válido')
+      toast.error('Please enter a valid phone number')
       return
     }
     setStep(2)
@@ -108,7 +108,7 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
         walk_in_name: clientName.trim(),
         walk_in_phone: clientPhone.trim(),
         operator_id: operadorId,
-        pickup_address: address.trim() || 'Entrega en planta',
+        pickup_address: address.trim() || 'Drop-off at plant',
         estimated_price: estimatePrice(),
         preferences: {
           separate_whites: preferences.separateWhites,
@@ -131,11 +131,11 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
         return
       }
 
-      toast.success('Orden creada exitosamente')
+      toast.success('Order created successfully')
       router.push(`/operador/tickets/${result.id}`)
     } catch (error) {
       console.error('Error creating order:', error)
-      toast.error('Error inesperado. Intenta de nuevo.')
+      toast.error('Unexpected error. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -155,20 +155,20 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
-              Datos del Cliente
+              Client Information
             </CardTitle>
             <CardDescription>
-              Información de contacto para esta orden
+              Contact information for this order
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="clientName">Nombre del cliente *</Label>
+              <Label htmlFor="clientName">Client name *</Label>
               <div className="relative">
                 <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="clientName"
-                  placeholder="Ej: María García"
+                  placeholder="E.g.: Maria Garcia"
                   className="pl-9"
                   value={clientName}
                   onChange={(e) => setClientName(e.target.value)}
@@ -177,13 +177,13 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="clientPhone">Teléfono *</Label>
+              <Label htmlFor="clientPhone">Phone *</Label>
               <div className="relative">
                 <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="clientPhone"
                   type="tel"
-                  placeholder="Ej: 3001234567"
+                  placeholder="E.g.: (555) 123-4567"
                   className="pl-9"
                   value={clientPhone}
                   onChange={(e) => setClientPhone(e.target.value)}
@@ -192,12 +192,12 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Dirección de entrega (opcional)</Label>
+              <Label htmlFor="address">Delivery address (optional)</Label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="address"
-                  placeholder="Si va a recoger en planta, déjalo vacío"
+                  placeholder="Leave empty for plant pickup"
                   className="pl-9"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
@@ -210,7 +210,7 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
               onClick={handleContinueToStep2}
               disabled={!clientName.trim() || !clientPhone.trim()}
             >
-              Continuar a preferencias
+              Continue to preferences
             </Button>
           </CardContent>
         </Card>
@@ -222,22 +222,22 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              Preferencias de Lavado
+              Washing Preferences
             </CardTitle>
             <CardDescription>
-              Personaliza cómo se va a lavar la ropa
+              Customize how the laundry will be washed
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid gap-4">
 
-              {/* Separar ropa blanca */}
+              {/* Separate whites */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
                   <Shirt className="h-5 w-5 text-primary" />
                   <div>
-                    <Label className="text-sm font-medium">Separar ropa blanca</Label>
-                    <p className="text-xs text-muted-foreground">Lavamos por separado tu ropa blanca, toallas y sabanas. (+{formatCOP(ADDITIONAL_PRICES.separateWhites)})</p>
+                    <Label className="text-sm font-medium">Separate whites</Label>
+                    <p className="text-xs text-muted-foreground">We wash your whites, towels, and sheets separately. (+{formatUSD(ADDITIONAL_PRICES.separateWhites)})</p>
                   </div>
                 </div>
                 <Switch
@@ -246,13 +246,13 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
                 />
               </div>
 
-              {/* Separar ropa de color */}
+              {/* Separate colors */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
                   <Shirt className="h-5 w-5 text-primary" />
                   <div>
-                    <Label className="text-sm font-medium">Separar ropa de color</Label>
-                    <p className="text-xs text-muted-foreground">Separamos tus prendas: negras con jeans y ropa de color aparte. (+{formatCOP(ADDITIONAL_PRICES.separateColors)})</p>
+                    <Label className="text-sm font-medium">Separate colors</Label>
+                    <p className="text-xs text-muted-foreground">We separate your garments: darks with jeans, and colors on their own. (+{formatUSD(ADDITIONAL_PRICES.separateColors)})</p>
                   </div>
                 </div>
                 <Switch
@@ -261,13 +261,13 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
                 />
               </div>
 
-              {/* Suavizante */}
+              {/* Fabric softener */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
                   <Droplets className="h-5 w-5 text-primary" />
                   <div>
-                    <Label className="text-sm font-medium">Suavizante</Label>
-                    <p className="text-xs text-muted-foreground">Deja la ropa suave y fresca (+{formatCOP(ADDITIONAL_PRICES.softener)})</p>
+                    <Label className="text-sm font-medium">Fabric softener</Label>
+                    <p className="text-xs text-muted-foreground">Leaves clothes soft and fresh (+{formatUSD(ADDITIONAL_PRICES.softener)})</p>
                   </div>
                 </div>
                 <Switch
@@ -276,14 +276,14 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
                 />
               </div>
 
-              {/* Aplicar Oxígeno Activo */}
+              {/* Active Oxygen */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
                   <Sparkles className="h-5 w-5 text-primary" />
                   <div>
-                    <Label className="text-sm font-medium">Aplicar Oxígeno Activo</Label>
+                    <Label className="text-sm font-medium">Apply Active Oxygen</Label>
                     <p className="text-xs text-muted-foreground">
-                      Intensifica y realza colores, ayuda a desmanchar y controla bacterias. (+{formatCOP(ADDITIONAL_PRICES.bleach)})
+                      Boosts and revives colors, helps remove stains, and controls bacteria. (+{formatUSD(ADDITIONAL_PRICES.bleach)})
                     </p>
                   </div>
                 </div>
@@ -293,13 +293,13 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
                 />
               </div>
 
-              {/* Desengrasante */}
+              {/* Degreaser */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
                   <Wind className="h-5 w-5 text-primary" />
                   <div>
-                    <Label className="text-sm font-medium">Aplicar desengrasante</Label>
-                    <p className="text-xs text-muted-foreground">Ideal para ropa de trabajo (+{formatCOP(ADDITIONAL_PRICES.degreaser)} por carga)</p>
+                    <Label className="text-sm font-medium">Apply degreaser</Label>
+                    <p className="text-xs text-muted-foreground">Ideal for work clothes (+{formatUSD(ADDITIONAL_PRICES.degreaser)} per load)</p>
                   </div>
                 </div>
                 <Switch
@@ -308,16 +308,16 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
                 />
               </div>
 
-              {/* Tratamiento de manchas — contador */}
+              {/* Stain treatment — counter */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div className="flex items-center gap-3">
                   <AlertTriangle className="h-5 w-5 text-primary" />
                   <div>
-                    <Label className="text-sm font-medium">Tratamiento de manchas</Label>
+                    <Label className="text-sm font-medium">Stain treatment</Label>
                     <p className="text-xs text-muted-foreground">
                       {preferences.stainCount > 0
-                        ? `${preferences.stainCount} mancha${preferences.stainCount > 1 ? 's' : ''} (+${formatCOP(preferences.stainCount * ADDITIONAL_PRICES.stainTreatment)})`
-                        : `+${formatCOP(ADDITIONAL_PRICES.stainTreatment)} por mancha`}
+                        ? `${preferences.stainCount} stain${preferences.stainCount > 1 ? 's' : ''} (+${formatUSD(preferences.stainCount * ADDITIONAL_PRICES.stainTreatment)})`
+                        : `+${formatUSD(ADDITIONAL_PRICES.stainTreatment)} per stain`}
                     </p>
                   </div>
                 </div>
@@ -345,17 +345,17 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
 
             </div>
 
-            {/* Fragancia */}
+            {/* Fragrance */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Palette className="h-5 w-5 text-primary" />
-                <Label>Fragancia</Label>
+                <Label>Fragrance</Label>
               </div>
               <Select
                 value={preferences.fragrance}
                 onValueChange={(v) => handlePreferenceChange('fragrance', v)}
               >
-                <SelectTrigger><SelectValue placeholder="Selecciona una fragancia" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select a fragrance" /></SelectTrigger>
                 <SelectContent>
                   {FRAGRANCE_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -364,93 +364,93 @@ export function NuevaOrdenForm({ operadorId, settings = DEFAULT_SETTINGS }: Nuev
               </Select>
             </div>
 
-            {/* Instrucciones especiales */}
+            {/* Special instructions */}
             <div className="space-y-2">
-              <Label htmlFor="notes">Instrucciones especiales (opcional)</Label>
+              <Label htmlFor="notes">Special instructions (optional)</Label>
               <Textarea
                 id="notes"
-                placeholder="Ej: Camisa azul con mancha de café..."
+                placeholder="E.g.: Blue shirt with coffee stain..."
                 value={preferences.notes}
                 onChange={(e) => handlePreferenceChange('notes', e.target.value)}
                 rows={3}
               />
             </div>
 
-            {/* Resumen */}
+            {/* Summary */}
             <div className="rounded-lg bg-muted/50 p-4 space-y-3">
-              <h4 className="font-semibold">Resumen de la orden</h4>
+              <h4 className="font-semibold">Order summary</h4>
               <div className="text-sm space-y-1">
                 <p className="text-muted-foreground">
-                  <span className="font-medium text-foreground">Cliente:</span> {clientName}
+                  <span className="font-medium text-foreground">Client:</span> {clientName}
                 </p>
                 <p className="text-muted-foreground">
-                  <span className="font-medium text-foreground">Teléfono:</span> {clientPhone}
+                  <span className="font-medium text-foreground">Phone:</span> {clientPhone}
                 </p>
                 {address && (
                   <p className="text-muted-foreground">
-                    <span className="font-medium text-foreground">Entrega:</span> {address}
+                    <span className="font-medium text-foreground">Delivery:</span> {address}
                   </p>
                 )}
                 <div className="border-t pt-2 mt-2 space-y-1">
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Precio por kg:</span>
-                    <span>{formatCOP(PRICE_PER_KG)}</span>
+                    <span>Price per lb:</span>
+                    <span>{formatUSD(PRICE_PER_KG)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Pedido mínimo (3 kg):</span>
-                    <span>{formatCOP(MIN_PRICE)}</span>
+                    <span>Minimum order (10 lb):</span>
+                    <span>{formatUSD(MIN_PRICE)}</span>
                   </div>
                   {preferences.separateWhites && (
                     <div className="flex justify-between">
-                      <span>Separar ropa blanca:</span>
-                      <span>+{formatCOP(ADDITIONAL_PRICES.separateWhites)}</span>
+                      <span>Separate whites:</span>
+                      <span>+{formatUSD(ADDITIONAL_PRICES.separateWhites)}</span>
                     </div>
                   )}
                   {preferences.separateColors && (
                     <div className="flex justify-between">
-                      <span>Separar ropa de color:</span>
-                      <span>+{formatCOP(ADDITIONAL_PRICES.separateColors)}</span>
+                      <span>Separate colors:</span>
+                      <span>+{formatUSD(ADDITIONAL_PRICES.separateColors)}</span>
                     </div>
                   )}
                   {preferences.useSoftener && (
                     <div className="flex justify-between">
-                      <span>Suavizante:</span>
-                      <span>+{formatCOP(ADDITIONAL_PRICES.softener)}</span>
+                      <span>Fabric softener:</span>
+                      <span>+{formatUSD(ADDITIONAL_PRICES.softener)}</span>
                     </div>
                   )}
                   {preferences.useBleach && (
                     <div className="flex justify-between">
-                      <span>Oxígeno Activo:</span>
-                      <span>+{formatCOP(ADDITIONAL_PRICES.bleach)}</span>
+                      <span>Active Oxygen:</span>
+                      <span>+{formatUSD(ADDITIONAL_PRICES.bleach)}</span>
                     </div>
                   )}
                   {preferences.useDegreaser && (
                     <div className="flex justify-between">
-                      <span>Desengrasante:</span>
-                      <span>+{formatCOP(ADDITIONAL_PRICES.degreaser)}</span>
+                      <span>Degreaser:</span>
+                      <span>+{formatUSD(ADDITIONAL_PRICES.degreaser)}</span>
                     </div>
                   )}
                   {preferences.stainCount > 0 && (
                     <div className="flex justify-between">
-                      <span>Manchas ({preferences.stainCount}):</span>
-                      <span>+{formatCOP(preferences.stainCount * ADDITIONAL_PRICES.stainTreatment)}</span>
+                      <span>Stains ({preferences.stainCount}):</span>
+                      <span>+{formatUSD(preferences.stainCount * ADDITIONAL_PRICES.stainTreatment)}</span>
                     </div>
                   )}
                   <div className="border-t pt-2 flex justify-between font-semibold">
-                    <span>Total estimado:</span>
-                    <span className="text-primary">{formatCOP(estimatePrice())}</span>
+                    <span>Estimated total:</span>
+                    <span className="text-primary">{formatUSD(estimatePrice())}</span>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">* El precio final se calcula al pesar la ropa</p>
+                <p className="text-xs text-muted-foreground">* The final price is calculated when weighing the laundry</p>
               </div>
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Atrás</Button>
+              <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>Back</Button>
               <Button className="flex-1" onClick={handleSubmit} disabled={loading}>
                 {loading
-                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creando...</>
-                  : 'Crear Orden'}
+                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</>
+                  : 'Create Order'}
               </Button>
             </div>
           </CardContent>

@@ -16,7 +16,7 @@ type ItemInput = {
 export async function createItemAction(data: ItemInput): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const supabase = await createClient()
-    if (!supabase) return { ok: false, error: 'Error de configuración del servidor' }
+    if (!supabase) return { ok: false, error: 'Server configuration error' }
     const cost_per_unit = data.units_per_box > 0 ? data.cost_per_box / data.units_per_box : data.cost_per_box
     const { error } = await supabase.from('inventory').insert({
       name: data.name.trim(),
@@ -41,7 +41,7 @@ export async function createItemAction(data: ItemInput): Promise<{ ok: true } | 
 export async function updateItemAction(id: string, data: ItemInput): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const supabase = await createClient()
-    if (!supabase) return { ok: false, error: 'Error de configuración del servidor' }
+    if (!supabase) return { ok: false, error: 'Server configuration error' }
     const cost_per_unit = data.units_per_box > 0 ? data.cost_per_box / data.units_per_box : data.cost_per_box
     const { error } = await supabase.from('inventory').update({
       name: data.name.trim(),
@@ -65,7 +65,7 @@ export async function updateItemAction(id: string, data: ItemInput): Promise<{ o
 export async function deleteItemAction(id: string): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
     const supabase = await createClient()
-    if (!supabase) return { ok: false, error: 'Error de configuración del servidor' }
+    if (!supabase) return { ok: false, error: 'Server configuration error' }
     const { error } = await supabase.from('inventory').delete().eq('id', id)
     if (error) return { ok: false, error: error.message }
     revalidatePath('/operador/inventario')

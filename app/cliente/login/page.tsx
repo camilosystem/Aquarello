@@ -26,7 +26,7 @@ export default function ClienteLoginPage() {
     e.preventDefault()
     
     if (!supabase) {
-      toast.error('Error de conexion. Por favor recarga la pagina.')
+      toast.error('Connection error. Please reload the page.')
       return
     }
     
@@ -56,17 +56,17 @@ export default function ClienteLoginPage() {
         })
       } else if (profile.role !== 'cliente' && profile.role !== 'admin') {
         await supabase.auth.signOut()
-        toast.error('Esta cuenta no tiene acceso de cliente.')
+        toast.error('This account does not have client access.')
         return
       }
 
-      toast.success('Bienvenido a Lavva')
+      toast.success('Welcome to Aquarello')
       router.push('/cliente')
       router.refresh()
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-      toast.error(errorMessage === 'Invalid login credentials' 
-        ? 'Email o contraseña incorrectos' 
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(errorMessage === 'Invalid login credentials'
+        ? 'Incorrect email or password'
         : errorMessage)
     } finally {
       setLoading(false)
@@ -80,31 +80,31 @@ export default function ClienteLoginPage() {
         <div className="flex flex-col items-center gap-3">
           <div className="rounded-2xl overflow-hidden shadow-xl">
             <Image
-              src="/logo-lavva.png"
-              alt="Lavva"
+              src="/AquaLogo.jpg"
+              alt="Aquarello"
               width={180}
               height={180}
               className="w-44 h-auto"
             />
           </div>
-          <p className="text-sm text-muted-foreground">Lavanderia a domicilio</p>
+          <p className="text-sm text-muted-foreground">Laundry pickup &amp; delivery</p>
         </div>
 
         <Card>
           <CardHeader className="text-center">
-            <CardTitle>Iniciar Sesión</CardTitle>
+            <CardTitle>Sign In</CardTitle>
             <CardDescription>
-              Ingresa a tu cuenta de cliente
+              Log in to your client account
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Correo electrónico</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="tu@email.com"
+                  placeholder="you@email.com"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
@@ -113,12 +113,12 @@ export default function ClienteLoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Tu contraseña"
+                    placeholder="Your password"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     required
@@ -144,25 +144,25 @@ export default function ClienteLoginPage() {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Ingresando...
+                    Signing in...
                   </>
                 ) : (
-                  'Iniciar Sesión'
+                  'Sign In'
                 )}
               </Button>
             </form>
 
             <div className="mt-6 text-center text-sm">
-              <span className="text-muted-foreground">¿No tienes cuenta? </span>
+              <span className="text-muted-foreground">Don&apos;t have an account? </span>
               <Link href="/cliente/registro" className="font-medium text-primary hover:underline">
-                Regístrate
+                Sign Up
               </Link>
             </div>
           </CardContent>
         </Card>
 
         <p className="text-center text-xs text-muted-foreground">
-          Al continuar, aceptas nuestros términos de servicio y política de privacidad
+          By continuing, you agree to our terms of service and privacy policy
         </p>
       </div>
     </div>

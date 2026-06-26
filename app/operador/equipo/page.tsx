@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { createClient as createIsolatedClient } from '@supabase/supabase-js' // Importamos el cliente clon
+import { createClient as createIsolatedClient } from '@supabase/supabase-js' // Isolated client clone
 import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/operador/sidebar'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -49,7 +49,7 @@ export default function EquipoPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    // Hemos sacado a supabase de las dependencias para evitar el ciclo infinito que te expulsaba
+    // supabase is intentionally excluded from deps to avoid an infinite refresh loop
     const loadTeam = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { 
@@ -87,20 +87,20 @@ export default function EquipoPage() {
 
   const handleCreateMember = async () => {
     if (!formData.email || !formData.password || !formData.full_name) {
-      toast.error('Completa todos los campos requeridos')
+      toast.error('Please fill in all required fields')
       return
     }
 
     setSaving(true)
     try {
-      // EL TRUCO MAESTRO: Creamos un clon de Supabase que NO guarda la sesión en tu navegador
+      // Use an isolated Supabase client so this signUp doesn't overwrite the current session
       const isolatedSupabase = createIsolatedClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         { auth: { persistSession: false, autoRefreshToken: false } }
       )
 
-      // Create auth user con el cliente aislado para que no te cierre la sesión
+      // Create auth user with the isolated client so it doesn't replace the operator's session
       const { data: authData, error: authError } = await isolatedSupabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -115,7 +115,7 @@ export default function EquipoPage() {
       if (authError) throw authError
 
       if (authData.user) {
-        // Actualizamos el perfil usando tu cliente principal (que sí tiene tu sesión de operador autorizada)
+        // Update the profile using the main client (which has the authorized operator session)
         await supabase
           .from('profiles')
           .update({
@@ -125,8 +125,8 @@ export default function EquipoPage() {
           })
           .eq('id', authData.user.id)
 
-        toast.success('Miembro creado exitosamente.')
-        
+        toast.success('Member created successfully.')
+
         // Refresh team list
         const { data: newTeam } = await supabase
           .from('profiles')
@@ -140,7 +140,7 @@ export default function EquipoPage() {
       setIsDialogOpen(false)
       setFormData({ email: '', password: '', full_name: '', phone: '', role: 'operador' })
     } catch (error: any) {
-      toast.error('Error al crear miembro: ' + (error.message || 'Error desconocido'))
+      toast.error('Error creating member: ' + (error.message || 'Unknown error'))
     }
     setSaving(false)
   }
@@ -160,10 +160,10 @@ export default function EquipoPage() {
         })
         .eq('id', editingMember.id)
 
-      toast.success('Miembro actualizado')
-      
-      setTeam(prev => prev.map(m => 
-        m.id === editingMember.id 
+      toast.success('Member updated')
+
+      setTeam(prev => prev.map(m =>
+        m.id === editingMember.id
           ? { ...m, full_name: formData.full_name, phone: formData.phone, role: formData.role }
           : m
       ))
@@ -172,13 +172,13 @@ export default function EquipoPage() {
       setEditingMember(null)
       setFormData({ email: '', password: '', full_name: '', phone: '', role: 'operador' })
     } catch {
-      toast.error('Error al actualizar')
+      toast.error('Error updating member')
     }
     setSaving(false)
   }
 
   const handleDeleteMember = async (member: Profile) => {
-    if (!confirm(`¿Eliminar a ${member.full_name}?`)) return
+    if (!confirm(`Remove ${member.full_name}?`)) return
 
     try {
       await supabase
@@ -186,10 +186,10 @@ export default function EquipoPage() {
         .update({ role: 'cliente' }) // Soft delete
         .eq('id', member.id)
 
-      toast.success('Miembro eliminado del equipo')
+      toast.success('Member removed from team')
       setTeam(prev => prev.filter(m => m.id !== member.id))
     } catch {
-      toast.error('Error al eliminar')
+      toast.error('Error removing member')
     }
   }
 
@@ -217,10 +217,10 @@ export default function EquipoPage() {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'admin': return 'Administrador'
-      case 'operador': return 'Operador'
-      case 'domiciliario': return 'Domiciliario'
-      case 'conductor': return 'Conductor'
+      case 'admin': return 'Administrator'
+      case 'operador': return 'Operator'
+      case 'domiciliario': return 'Driver'
+      case 'conductor': return 'Truck Driver'
       default: return role
     }
   }
@@ -252,10 +252,10 @@ export default function EquipoPage() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-foreground">
-                Gestión de Equipo
+                Team Management
               </h1>
               <p className="text-muted-foreground">
-                Administra operadores, domiciliarios y conductores
+                Manage operators, drivers, and truck drivers
               </p>
             </div>
             <Dialog open={isDialogOpen && !editingMember} onOpenChange={(open) => {
@@ -267,21 +267,21 @@ export default function EquipoPage() {
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
-                  Nuevo Miembro
+                  New Member
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Crear Nuevo Miembro</DialogTitle>
+                  <DialogTitle>Create New Member</DialogTitle>
                   <DialogDescription>
-                    Ingresa los datos del nuevo miembro del equipo
+                    Enter the details for the new team member
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label>Nombre Completo *</Label>
+                    <Label>Full Name *</Label>
                     <Input
-                      placeholder="Juan Pérez"
+                      placeholder="John Smith"
                       value={formData.full_name}
                       onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
                     />
@@ -290,49 +290,49 @@ export default function EquipoPage() {
                     <Label>Email *</Label>
                     <Input
                       type="email"
-                      placeholder="juan@lavva.co"
+                      placeholder="john@aquarello.co"
                       value={formData.email}
                       onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Contraseña *</Label>
+                    <Label>Password *</Label>
                     <Input
                       type="password"
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder="Minimum 6 characters"
                       value={formData.password}
                       onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Teléfono</Label>
+                    <Label>Phone</Label>
                     <Input
-                      placeholder="300 123 4567"
+                      placeholder="(555) 123-4567"
                       value={formData.phone}
                       onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Rol *</Label>
+                    <Label>Role *</Label>
                     <Select value={formData.role} onValueChange={(value: UserRole) => setFormData(prev => ({ ...prev, role: value }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="operador">Operador de Lavado</SelectItem>
-                        <SelectItem value="domiciliario">Domiciliario</SelectItem>
-                        <SelectItem value="conductor">Conductor de Camión</SelectItem>
-                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="operador">Laundry Operator</SelectItem>
+                        <SelectItem value="domiciliario">Driver</SelectItem>
+                        <SelectItem value="conductor">Truck Driver</SelectItem>
+                        <SelectItem value="admin">Administrator</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
+                    Cancel
                   </Button>
                   <Button onClick={handleCreateMember} disabled={saving}>
-                    {saving ? 'Creando...' : 'Crear Miembro'}
+                    {saving ? 'Creating...' : 'Create Member'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -361,7 +361,7 @@ export default function EquipoPage() {
                     <User className="h-5 w-5 text-cyan-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Operadores</p>
+                    <p className="text-sm text-muted-foreground">Operators</p>
                     <p className="text-2xl font-bold">{team.filter(m => m.role === 'operador').length}</p>
                   </div>
                 </div>
@@ -374,7 +374,7 @@ export default function EquipoPage() {
                     <User className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Domiciliarios</p>
+                    <p className="text-sm text-muted-foreground">Drivers</p>
                     <p className="text-2xl font-bold">{team.filter(m => m.role === 'domiciliario').length}</p>
                   </div>
                 </div>
@@ -387,7 +387,7 @@ export default function EquipoPage() {
                     <User className="h-5 w-5 text-orange-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Conductores</p>
+                    <p className="text-sm text-muted-foreground">Truck Drivers</p>
                     <p className="text-2xl font-bold">{team.filter(m => m.role === 'conductor').length}</p>
                   </div>
                 </div>
@@ -408,7 +408,7 @@ export default function EquipoPage() {
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <h3 className="font-semibold">{member.full_name || 'Sin nombre'}</h3>
+                        <h3 className="font-semibold">{member.full_name || 'No name'}</h3>
                         <Badge className={getRoleColor(member.role)}>
                           {getRoleLabel(member.role)}
                         </Badge>
@@ -423,18 +423,18 @@ export default function EquipoPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => openEditDialog(member)}>
                           <Pencil className="mr-2 h-4 w-4" />
-                          Editar
+                          Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => router.push(`/operador/equipo/${member.id}`)}>
                           <ClipboardList className="mr-2 h-4 w-4" />
-                          Ver Actividad
+                          View Activity
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
+                        <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => handleDeleteMember(member)}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar
+                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -449,7 +449,7 @@ export default function EquipoPage() {
                     )}
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Calendar className="h-4 w-4" />
-                      <span>Desde {new Date(member.created_at).toLocaleDateString('es-CO', {
+                      <span>Since {new Date(member.created_at).toLocaleDateString('en-US', {
                         month: 'short',
                         year: 'numeric'
                       })}</span>
@@ -463,10 +463,10 @@ export default function EquipoPage() {
               <Card className="col-span-full">
                 <CardContent className="py-12 text-center">
                   <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p className="text-muted-foreground">No hay miembros en el equipo</p>
+                  <p className="text-muted-foreground">No team members yet</p>
                   <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
                     <Plus className="mr-2 h-4 w-4" />
-                    Agregar Primer Miembro
+                    Add First Member
                   </Button>
                 </CardContent>
               </Card>
@@ -483,49 +483,49 @@ export default function EquipoPage() {
           }}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Editar Miembro</DialogTitle>
+                <DialogTitle>Edit Member</DialogTitle>
                 <DialogDescription>
-                  Actualiza los datos del miembro del equipo
+                  Update this team member's details
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>Nombre Completo *</Label>
+                  <Label>Full Name *</Label>
                   <Input
-                    placeholder="Juan Pérez"
+                    placeholder="John Smith"
                     value={formData.full_name}
                     onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Teléfono</Label>
+                  <Label>Phone</Label>
                   <Input
-                    placeholder="300 123 4567"
+                    placeholder="(555) 123-4567"
                     value={formData.phone}
                     onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Rol *</Label>
+                  <Label>Role *</Label>
                   <Select value={formData.role} onValueChange={(value: UserRole) => setFormData(prev => ({ ...prev, role: value }))}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="operador">Operador de Lavado</SelectItem>
-                      <SelectItem value="domiciliario">Domiciliario</SelectItem>
-                      <SelectItem value="conductor">Conductor de Camión</SelectItem>
-                      <SelectItem value="admin">Administrador</SelectItem>
+                      <SelectItem value="operador">Laundry Operator</SelectItem>
+                      <SelectItem value="domiciliario">Driver</SelectItem>
+                      <SelectItem value="conductor">Truck Driver</SelectItem>
+                      <SelectItem value="admin">Administrator</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancelar
+                  Cancel
                 </Button>
                 <Button onClick={handleUpdateMember} disabled={saving}>
-                  {saving ? 'Guardando...' : 'Guardar Cambios'}
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </DialogFooter>
             </DialogContent>

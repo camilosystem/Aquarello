@@ -1,12 +1,12 @@
 import type { Metadata, Viewport } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Lavva - Cliente',
-  description: 'Solicita tu servicio de lavandería a domicilio',
+  title: 'Aquarello - Client',
+  description: 'Request your laundry pickup and delivery service',
 }
 
 export const viewport: Viewport = {
-  themeColor: '#0891b2',
+  themeColor: '#63c91e',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

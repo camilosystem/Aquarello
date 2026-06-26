@@ -60,14 +60,14 @@ interface Machine {
 
 // Fallback mock data in case the machines table doesn't exist yet
 const MOCK_MACHINES: Machine[] = [
-  { id: 'LV-001', name: 'Lavadora Industrial 1', type: 'lavadora', capacity: '20kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
-  { id: 'LV-002', name: 'Lavadora Industrial 2', type: 'lavadora', capacity: '20kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
-  { id: 'LV-003', name: 'Lavadora Mediana 1', type: 'lavadora', capacity: '12kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
-  { id: 'LV-004', name: 'Lavadora Mediana 2', type: 'lavadora', capacity: '12kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
-  { id: 'LV-005', name: 'Lavadora Delicados', type: 'lavadora', capacity: '8kg', status: 'mantenimiento', current_order_id: null, end_time: null, total_minutes: null },
-  { id: 'SC-001', name: 'Secadora Industrial 1', type: 'secadora', capacity: '25kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
-  { id: 'SC-002', name: 'Secadora Industrial 2', type: 'secadora', capacity: '25kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
-  { id: 'SC-003', name: 'Secadora Mediana 1', type: 'secadora', capacity: '15kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
+  { id: 'LV-001', name: 'Industrial Washer 1', type: 'lavadora', capacity: '20kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
+  { id: 'LV-002', name: 'Industrial Washer 2', type: 'lavadora', capacity: '20kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
+  { id: 'LV-003', name: 'Medium Washer 1', type: 'lavadora', capacity: '12kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
+  { id: 'LV-004', name: 'Medium Washer 2', type: 'lavadora', capacity: '12kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
+  { id: 'LV-005', name: 'Delicates Washer', type: 'lavadora', capacity: '8kg', status: 'mantenimiento', current_order_id: null, end_time: null, total_minutes: null },
+  { id: 'SC-001', name: 'Industrial Dryer 1', type: 'secadora', capacity: '25kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
+  { id: 'SC-002', name: 'Industrial Dryer 2', type: 'secadora', capacity: '25kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
+  { id: 'SC-003', name: 'Medium Dryer 1', type: 'secadora', capacity: '15kg', status: 'disponible', current_order_id: null, end_time: null, total_minutes: null },
 ]
 
 interface MachineForm {
@@ -164,7 +164,7 @@ export default function LavadorasPage() {
       .from('machines')
       .update({ status: newStatus })
       .eq('id', machine.id)
-    if (error) toast.error('Error al cambiar estado')
+    if (error) toast.error('Error changing status')
     else await loadMachines()
   }
 
@@ -174,9 +174,9 @@ export default function LavadorasPage() {
       .from('machines')
       .update({ status: 'disponible', current_order_id: null, end_time: null, total_minutes: null })
       .eq('id', machine.id)
-    if (error) toast.error('Error al liberar la máquina')
+    if (error) toast.error('Error releasing the machine')
     else {
-      toast.success(`${machine.name} liberada correctamente`)
+      toast.success(`${machine.name} released successfully`)
       await loadMachines()
     }
   }
@@ -197,30 +197,33 @@ export default function LavadorasPage() {
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.capacity.trim()) {
-      toast.error('Nombre y capacidad son obligatorios')
+      toast.error('Name and capacity are required')
       return
     }
     if (!supabase) return
     setSaving(true)
     try {
       if (dialogMode === 'create') {
+        const prefix = form.type === 'lavadora' ? 'LV' : 'SC'
+        const newId = `${prefix}-${Date.now()}`
         const { error } = await supabase
           .from('machines')
-          .insert({ name: form.name.trim(), type: form.type, capacity: form.capacity.trim(), status: 'disponible' })
+          .insert({ id: newId, name: form.name.trim(), type: form.type, capacity: form.capacity.trim(), status: 'disponible' })
         if (error) throw error
-        toast.success('Máquina creada correctamente')
+        toast.success('Machine created successfully')
       } else if (editingMachine) {
         const { error } = await supabase
           .from('machines')
           .update({ name: form.name.trim(), type: form.type, capacity: form.capacity.trim() })
           .eq('id', editingMachine.id)
         if (error) throw error
-        toast.success('Máquina actualizada correctamente')
+        toast.success('Machine updated successfully')
       }
       setDialogOpen(false)
       await loadMachines()
-    } catch {
-      toast.error('Error al guardar. Intenta de nuevo.')
+    } catch (err) {
+      console.error('Machine save error:', err)
+      toast.error('Error saving. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -232,9 +235,9 @@ export default function LavadorasPage() {
       .from('machines')
       .delete()
       .eq('id', machine.id)
-    if (error) toast.error('Error al eliminar la máquina')
+    if (error) toast.error('Error deleting the machine')
     else {
-      toast.success(`${machine.name} eliminada`)
+      toast.success(`${machine.name} deleted`)
       await loadMachines()
     }
   }
@@ -250,9 +253,9 @@ export default function LavadorasPage() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'disponible': return 'Disponible'
-      case 'en_uso': return 'En Uso'
-      case 'mantenimiento': return 'Mantenimiento'
+      case 'disponible': return 'Available'
+      case 'en_uso': return 'In Use'
+      case 'mantenimiento': return 'Maintenance'
       default: return status
     }
   }
@@ -297,7 +300,7 @@ export default function LavadorasPage() {
         {machine.status === 'en_uso' && machine.end_time && machine.total_minutes && (
           <div className="flex items-center justify-between mb-3 p-2 bg-muted/50 rounded-lg">
             <div className="text-sm">
-              <p className="font-medium text-foreground">Ciclo activo</p>
+              <p className="font-medium text-foreground">Active cycle</p>
               {machine.order_qr && (
                 <p className="text-xs font-mono text-primary mt-0.5 font-semibold">{machine.order_qr}</p>
               )}
@@ -308,7 +311,7 @@ export default function LavadorasPage() {
               totalMinutes={machine.total_minutes}
               type={machine.type}
               onComplete={() => {
-                toast.success(`${machine.name} ha terminado`)
+                toast.success(`${machine.name} has finished`)
                 loadMachines()
               }}
             />
@@ -319,9 +322,9 @@ export default function LavadorasPage() {
           <p className="text-sm text-primary font-mono font-semibold mb-3">{machine.order_qr}</p>
         )}
 
-        {/* Botones de acción */}
+        {/* Action buttons */}
         <div className="flex flex-col gap-2">
-          {/* Liberar Máquina — solo para en_uso */}
+          {/* Release machine — only for en_uso */}
           {machine.status === 'en_uso' && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -332,29 +335,29 @@ export default function LavadorasPage() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <XCircle className="mr-2 h-4 w-4" />
-                  Liberar Máquina
+                  Release Machine
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>¿Liberar {machine.name}?</AlertDialogTitle>
+                  <AlertDialogTitle>Release {machine.name}?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    La máquina quedará como <strong>Disponible</strong>. Esto no cancela la orden asignada — úsalo solo para corregir asignaciones erróneas.
+                    The machine will be marked as <strong>Available</strong>. This does not cancel the assigned order — use this only to fix incorrect assignments.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Volver</AlertDialogCancel>
+                  <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Back</AlertDialogCancel>
                   <AlertDialogAction
                     className="bg-red-600 hover:bg-red-700"
                     onClick={(e) => { e.stopPropagation(); freeMachine(machine) }}
                   >
-                    Sí, liberar
+                    Yes, release
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
           )}
-          {/* Mantenimiento toggle — solo para disponible/mantenimiento */}
+          {/* Maintenance toggle — only for disponible/mantenimiento */}
           {machine.status !== 'en_uso' && (
             <Button
               variant="outline"
@@ -363,13 +366,13 @@ export default function LavadorasPage() {
               onClick={(e) => { e.stopPropagation(); toggleMachineStatus(machine) }}
             >
               {machine.status === 'disponible' ? (
-                <><PowerOff className="mr-2 h-4 w-4" />Poner en Mantenimiento</>
+                <><PowerOff className="mr-2 h-4 w-4" />Set to Maintenance</>
               ) : (
-                <><Power className="mr-2 h-4 w-4" />Activar</>
+                <><Power className="mr-2 h-4 w-4" />Activate</>
               )}
             </Button>
           )}
-          {/* Editar / Eliminar */}
+          {/* Edit / Delete */}
           {!usingMock && (
             <div className="flex gap-2">
               <Button
@@ -379,7 +382,7 @@ export default function LavadorasPage() {
                 onClick={(e) => { e.stopPropagation(); openEdit(machine) }}
               >
                 <Pencil className="mr-2 h-4 w-4" />
-                Editar
+                Edit
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -389,26 +392,26 @@ export default function LavadorasPage() {
                     className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10"
                     disabled={machine.status === 'en_uso'}
                     onClick={(e) => e.stopPropagation()}
-                    title={machine.status === 'en_uso' ? 'No se puede eliminar mientras está en uso' : ''}
+                    title={machine.status === 'en_uso' ? 'Cannot delete while in use' : ''}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Eliminar
+                    Delete
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>¿Eliminar {machine.name}?</AlertDialogTitle>
+                    <AlertDialogTitle>Delete {machine.name}?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Esta acción no se puede deshacer. La máquina será removida permanentemente del sistema.
+                      This action cannot be undone. The machine will be permanently removed from the system.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancelar</AlertDialogCancel>
+                    <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       className="bg-destructive hover:bg-destructive/90"
                       onClick={(e) => { e.stopPropagation(); handleDelete(machine) }}
                     >
-                      Sí, eliminar
+                      Yes, delete
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -429,19 +432,19 @@ export default function LavadorasPage() {
           {/* Header */}
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Estado de Máquinas</h1>
-              <p className="text-muted-foreground">Monitorea el estado de lavadoras y secadoras en tiempo real</p>
+              <h1 className="text-2xl font-bold text-foreground">Machine Status</h1>
+              <p className="text-muted-foreground">Monitor washer and dryer status in real time</p>
             </div>
             <div className="flex items-center gap-3">
               {usingMock && (
                 <Badge variant="outline" className="text-yellow-700 border-yellow-300 bg-yellow-50">
-                  Vista demo (tabla machines sin crear)
+                  Demo view (machines table not created)
                 </Badge>
               )}
               {!usingMock && (
                 <Button onClick={openCreate}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Nueva Máquina
+                  New Machine
                 </Button>
               )}
             </div>
@@ -450,10 +453,10 @@ export default function LavadorasPage() {
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Total Máquinas', value: machines.length, icon: WashingMachine, bg: 'bg-primary/10', color: 'text-primary' },
-              { label: 'Disponibles', value: machines.filter(m => m.status === 'disponible').length, icon: CheckCircle2, bg: 'bg-green-100', color: 'text-green-600' },
-              { label: 'En Uso', value: machines.filter(m => m.status === 'en_uso').length, icon: Clock, bg: 'bg-blue-100', color: 'text-blue-600' },
-              { label: 'Mantenimiento', value: machines.filter(m => m.status === 'mantenimiento').length, icon: AlertTriangle, bg: 'bg-yellow-100', color: 'text-yellow-600' },
+              { label: 'Total Machines', value: machines.length, icon: WashingMachine, bg: 'bg-primary/10', color: 'text-primary' },
+              { label: 'Available', value: machines.filter(m => m.status === 'disponible').length, icon: CheckCircle2, bg: 'bg-green-100', color: 'text-green-600' },
+              { label: 'In Use', value: machines.filter(m => m.status === 'en_uso').length, icon: Clock, bg: 'bg-blue-100', color: 'text-blue-600' },
+              { label: 'Maintenance', value: machines.filter(m => m.status === 'mantenimiento').length, icon: AlertTriangle, bg: 'bg-yellow-100', color: 'text-yellow-600' },
             ].map(stat => (
               <Card key={stat.label}>
                 <CardContent className="p-4">
@@ -471,12 +474,12 @@ export default function LavadorasPage() {
             ))}
           </div>
 
-          {/* Lavadoras */}
+          {/* Washers */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Droplets className="h-5 w-5 text-blue-500" />
-                Lavadoras
+                Washers
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -486,12 +489,12 @@ export default function LavadorasPage() {
             </CardContent>
           </Card>
 
-          {/* Secadoras */}
+          {/* Dryers */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Wind className="h-5 w-5 text-orange-500" />
-                Secadoras
+                Dryers
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -503,28 +506,28 @@ export default function LavadorasPage() {
         </div>
       </main>
 
-      {/* Dialog crear / editar */}
+      {/* Create / edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {dialogMode === 'create' ? 'Nueva Máquina' : `Editar ${editingMachine?.name}`}
+              {dialogMode === 'create' ? 'New Machine' : `Edit ${editingMachine?.name}`}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="machine-name">Nombre *</Label>
+              <Label htmlFor="machine-name">Name *</Label>
               <Input
                 id="machine-name"
-                placeholder="Ej: Lavadora Industrial 3"
+                placeholder="E.g.: Industrial Washer 3"
                 value={form.name}
                 onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="machine-type">Tipo *</Label>
+              <Label htmlFor="machine-type">Type *</Label>
               <Select
                 value={form.type}
                 onValueChange={(v) => setForm(prev => ({ ...prev, type: v as 'lavadora' | 'secadora' }))}
@@ -533,17 +536,17 @@ export default function LavadorasPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="lavadora">Lavadora</SelectItem>
-                  <SelectItem value="secadora">Secadora</SelectItem>
+                  <SelectItem value="lavadora">Washer</SelectItem>
+                  <SelectItem value="secadora">Dryer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="machine-capacity">Capacidad *</Label>
+              <Label htmlFor="machine-capacity">Capacity *</Label>
               <Input
                 id="machine-capacity"
-                placeholder="Ej: 20kg"
+                placeholder="E.g.: 20kg"
                 value={form.capacity}
                 onChange={(e) => setForm(prev => ({ ...prev, capacity: e.target.value }))}
               />
@@ -552,12 +555,12 @@ export default function LavadorasPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
-              Cancelar
+              Cancel
             </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving
-                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
-                : dialogMode === 'create' ? 'Crear Máquina' : 'Guardar Cambios'
+                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+                : dialogMode === 'create' ? 'Create Machine' : 'Save Changes'
               }
             </Button>
           </DialogFooter>

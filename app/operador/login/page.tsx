@@ -23,7 +23,7 @@ export default function OperadorLoginPage() {
     e.preventDefault()
     
     if (!supabase) {
-      toast.error("Error de conexion. Por favor recarga la pagina.")
+      toast.error("Connection error. Please reload the page.")
       return
     }
     
@@ -48,13 +48,13 @@ export default function OperadorLoginPage() {
       .single()
 
     if (profile?.role !== "operador" && profile?.role !== "admin") {
-      toast.error("No tienes permisos de operador")
+      toast.error("You don't have operator permissions")
       await supabase.auth.signOut()
       setLoading(false)
       return
     }
 
-    toast.success("Bienvenido!")
+    toast.success("Welcome!")
     router.push("/operador")
     setLoading(false)
   }
@@ -65,7 +65,7 @@ export default function OperadorLoginPage() {
       <header className="p-4">
         <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" />
-          <span className="text-sm">Volver al inicio</span>
+          <span className="text-sm">Back to home</span>
         </Link>
       </header>
 
@@ -75,29 +75,29 @@ export default function OperadorLoginPage() {
             <div className="flex justify-center mb-6">
               <div className="rounded-2xl overflow-hidden shadow-xl">
                 <Image
-                  src="/logo-lavva.png"
-                  alt="Lavva"
+                  src="/AquaLogo.jpg"
+                  alt="Aquarello"
                   width={180}
                   height={180}
                   className="w-40 h-auto"
                 />
               </div>
             </div>
-            <CardTitle className="text-2xl">Panel de Operadores</CardTitle>
+            <CardTitle className="text-2xl">Operator Panel</CardTitle>
             <CardDescription>
-              Accede al sistema de gestion de lavanderia
+              Access the laundry management system
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Correo Electronico</Label>
+                <Label htmlFor="email">Email</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="email"
                     type="email"
-                    placeholder="operador@lavva.co"
+                    placeholder="operador@aquarello.co"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
@@ -107,7 +107,7 @@ export default function OperadorLoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Contrasena</Label>
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -124,12 +124,12 @@ export default function OperadorLoginPage() {
 
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Iniciar Sesion
+                Sign In
               </Button>
             </form>
 
             <p className="text-xs text-center text-muted-foreground mt-6">
-              Solo personal autorizado de Lavva
+              Authorized Aquarello personnel only
             </p>
           </CardContent>
         </Card>

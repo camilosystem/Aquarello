@@ -17,21 +17,22 @@ import {
   Shirt,
   DollarSign,
 } from 'lucide-react'
+import { formatUSD } from '@/lib/types'
 
 const STATUS_LABELS: Record<string, string> = {
-  pendiente: 'Pendiente',
-  recogido: 'Recogido',
-  en_bodega: 'En bodega',
-  en_transito_lavado: 'En transito lavado',
-  en_lavado: 'En lavado',
-  en_secado: 'En secado',
-  en_planchado: 'En planchado',
-  en_doblado: 'En doblado',
-  listo: 'Listo',
-  en_transito_entrega: 'En transito entrega',
-  en_entrega: 'En entrega',
-  entregado: 'Entregado',
-  cancelado: 'Cancelado',
+  pendiente: 'Pending',
+  recogido: 'Picked up',
+  en_bodega: 'In warehouse',
+  en_transito_lavado: 'In transit to wash',
+  en_lavado: 'Washing',
+  en_secado: 'Drying',
+  en_planchado: 'Ironing',
+  en_doblado: 'Folding',
+  listo: 'Ready',
+  en_transito_entrega: 'Out for delivery',
+  en_entrega: 'Delivering',
+  entregado: 'Delivered',
+  cancelado: 'Cancelled',
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -69,10 +70,9 @@ export default function ReportesPage() {
     loadData()
   }, [])
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value)
+  const formatCurrency = formatUSD
 
-  // Estadísticas
+  // Statistics
   const totalOrders = orders.length
   const entregados = orders.filter(o => o.status === 'entregado').length
   const enProceso = orders.filter(o => !['entregado', 'cancelado', 'pendiente'].includes(o.status)).length
@@ -81,13 +81,13 @@ export default function ReportesPage() {
   const ingresos = orders.filter(o => o.status === 'entregado').reduce((acc, o) => acc + (o.total_price || 0), 0)
   const ticketPromedio = entregados > 0 ? ingresos / entregados : 0
 
-  // Distribución por estado
+  // Status distribution
   const statusCounts = orders.reduce((acc, o) => {
     acc[o.status] = (acc[o.status] || 0) + 1
     return acc
   }, {} as Record<string, number>)
 
-  // Últimas órdenes
+  // Recent orders
   const recentOrders = orders.slice(0, 10)
 
   if (loading) {
@@ -108,18 +108,18 @@ export default function ReportesPage() {
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Reportes</h1>
-              <p className="text-muted-foreground">Estadisticas y metricas del servicio</p>
+              <h1 className="text-2xl font-bold text-foreground">Reports</h1>
+              <p className="text-muted-foreground">Service statistics and metrics</p>
             </div>
             <Select value={period} onValueChange={setPeriod}>
               <SelectTrigger className="w-44">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="hoy">Hoy</SelectItem>
-                <SelectItem value="semana">Esta semana</SelectItem>
-                <SelectItem value="mes">Este mes</SelectItem>
-                <SelectItem value="todo">Todo el tiempo</SelectItem>
+                <SelectItem value="hoy">Today</SelectItem>
+                <SelectItem value="semana">This week</SelectItem>
+                <SelectItem value="mes">This month</SelectItem>
+                <SelectItem value="todo">All time</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -130,7 +130,7 @@ export default function ReportesPage() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Total Pedidos</p>
+                    <p className="text-sm text-muted-foreground">Total Orders</p>
                     <p className="text-3xl font-bold mt-1">{totalOrders}</p>
                   </div>
                   <div className="p-2 rounded-full bg-primary/10">
@@ -144,10 +144,10 @@ export default function ReportesPage() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Entregados</p>
+                    <p className="text-sm text-muted-foreground">Delivered</p>
                     <p className="text-3xl font-bold mt-1 text-green-600">{entregados}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {totalOrders > 0 ? Math.round((entregados / totalOrders) * 100) : 0}% del total
+                      {totalOrders > 0 ? Math.round((entregados / totalOrders) * 100) : 0}% of total
                     </p>
                   </div>
                   <div className="p-2 rounded-full bg-green-100">
@@ -161,9 +161,9 @@ export default function ReportesPage() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">En Proceso</p>
+                    <p className="text-sm text-muted-foreground">In Progress</p>
                     <p className="text-3xl font-bold mt-1 text-blue-600">{enProceso}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{pendientes} pendientes</p>
+                    <p className="text-xs text-muted-foreground mt-1">{pendientes} pending</p>
                   </div>
                   <div className="p-2 rounded-full bg-blue-100">
                     <Clock className="h-5 w-5 text-blue-600" />
@@ -176,9 +176,9 @@ export default function ReportesPage() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Ingresos</p>
+                    <p className="text-sm text-muted-foreground">Revenue</p>
                     <p className="text-2xl font-bold mt-1 text-primary">{formatCurrency(ingresos)}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Ticket prom: {formatCurrency(ticketPromedio)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Avg. ticket: {formatCurrency(ticketPromedio)}</p>
                   </div>
                   <div className="p-2 rounded-full bg-primary/10">
                     <DollarSign className="h-5 w-5 text-primary" />
@@ -189,18 +189,18 @@ export default function ReportesPage() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Distribución por Estado */}
+            {/* Status Distribution */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="h-5 w-5 text-primary" />
-                  Distribucion por Estado
+                  Status Distribution
                 </CardTitle>
-                <CardDescription>Cantidad de pedidos en cada estado</CardDescription>
+                <CardDescription>Number of orders in each status</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {Object.entries(statusCounts).length === 0 ? (
-                  <p className="text-muted-foreground text-sm text-center py-4">Sin datos disponibles</p>
+                  <p className="text-muted-foreground text-sm text-center py-4">No data available</p>
                 ) : (
                   Object.entries(statusCounts)
                     .sort(([, a], [, b]) => b - a)
@@ -225,41 +225,41 @@ export default function ReportesPage() {
               </CardContent>
             </Card>
 
-            {/* Resumen Financiero */}
+            {/* Financial Summary */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
-                  Resumen Financiero
+                  Financial Summary
                 </CardTitle>
-                <CardDescription>Metricas de ingresos y pedidos</CardDescription>
+                <CardDescription>Revenue and order metrics</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex justify-between py-3 border-b">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Shirt className="h-4 w-4" />
-                    Total pedidos completados
+                    Total completed orders
                   </div>
                   <span className="font-semibold">{entregados}</span>
                 </div>
                 <div className="flex justify-between py-3 border-b">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <DollarSign className="h-4 w-4" />
-                    Ingresos totales
+                    Total revenue
                   </div>
                   <span className="font-semibold text-primary">{formatCurrency(ingresos)}</span>
                 </div>
                 <div className="flex justify-between py-3 border-b">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <TrendingUp className="h-4 w-4" />
-                    Ticket promedio
+                    Average ticket
                   </div>
                   <span className="font-semibold">{formatCurrency(ticketPromedio)}</span>
                 </div>
                 <div className="flex justify-between py-3 border-b">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
-                    Tasa de cancelacion
+                    Cancellation rate
                   </div>
                   <span className="font-semibold text-red-600">
                     {totalOrders > 0 ? Math.round((cancelados / totalOrders) * 100) : 0}%
@@ -268,7 +268,7 @@ export default function ReportesPage() {
                 <div className="flex justify-between py-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <CheckCircle className="h-4 w-4" />
-                    Tasa de completados
+                    Completion rate
                   </div>
                   <span className="font-semibold text-green-600">
                     {totalOrders > 0 ? Math.round((entregados / totalOrders) * 100) : 0}%
@@ -278,25 +278,25 @@ export default function ReportesPage() {
             </Card>
           </div>
 
-          {/* Ultimos Pedidos */}
+          {/* Recent Orders */}
           <Card>
             <CardHeader>
-              <CardTitle>Ultimos Pedidos</CardTitle>
-              <CardDescription>Los 10 pedidos mas recientes del sistema</CardDescription>
+              <CardTitle>Recent Orders</CardTitle>
+              <CardDescription>The 10 most recent orders in the system</CardDescription>
             </CardHeader>
             <CardContent>
               {recentOrders.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No hay pedidos registrados aun</p>
+                <p className="text-center text-muted-foreground py-8">No orders registered yet</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b text-left">
-                        <th className="pb-3 pr-4 font-medium text-muted-foreground">ID Pedido</th>
-                        <th className="pb-3 pr-4 font-medium text-muted-foreground">Direccion</th>
-                        <th className="pb-3 pr-4 font-medium text-muted-foreground">Estado</th>
+                        <th className="pb-3 pr-4 font-medium text-muted-foreground">Order ID</th>
+                        <th className="pb-3 pr-4 font-medium text-muted-foreground">Address</th>
+                        <th className="pb-3 pr-4 font-medium text-muted-foreground">Status</th>
                         <th className="pb-3 pr-4 font-medium text-muted-foreground">Total</th>
-                        <th className="pb-3 font-medium text-muted-foreground">Fecha</th>
+                        <th className="pb-3 font-medium text-muted-foreground">Date</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -317,7 +317,7 @@ export default function ReportesPage() {
                             {formatCurrency(order.total_price || 0)}
                           </td>
                           <td className="py-3 text-muted-foreground text-xs">
-                            {new Date(order.created_at).toLocaleDateString('es-CO')}
+                            {new Date(order.created_at).toLocaleDateString('en-US')}
                           </td>
                         </tr>
                       ))}

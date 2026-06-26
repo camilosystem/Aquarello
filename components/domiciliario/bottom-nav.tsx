@@ -8,22 +8,22 @@ import { cn } from "@/lib/utils"
 const navItems = [
   {
     href: "/domiciliario",
-    label: "Inicio",
+    label: "Home",
     icon: Home,
   },
   {
     href: "/domiciliario/escanear",
-    label: "Escanear",
+    label: "Scan",
     icon: ScanLine,
   },
   {
     href: "/domiciliario/historial",
-    label: "Historial",
+    label: "History",
     icon: History,
   },
   {
     href: "/domiciliario/perfil",
-    label: "Perfil",
+    label: "Profile",
     icon: User,
   },
 ]

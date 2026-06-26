@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.payments (
 
 ALTER TABLE public.payments ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "operador_payments" ON public.payments;
 CREATE POLICY "operador_payments" ON public.payments FOR ALL TO authenticated
   USING (
     EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role IN ('operador','admin'))
